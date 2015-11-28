@@ -194,7 +194,7 @@ while (1)
         ); // end getMultiMarketOrders() call
     }
     
-    // export
+    // export to Marketlogs files
     foreach ($Orders as $reg_id => $Orders2) {
         foreach ($Orders2 as $i => $obj) {
             $row = $obj->row;
@@ -235,7 +235,7 @@ function getExportFilename($row)
     $fname_prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs';
     //$fname_region2 = $handler->getRegion($reg_id)->name;
     $fname_time = date("Y.m.d His", time() - 300);
-    if (!$fname_item) { echo ">>> malformed fname region=$fname_region, item=$item_id\n"; continue; }
+    if (!$fname_item) { echo ">>> malformed fname region=$fname_region, item=$fname_item[$item_id]; >$row<\n"; continue; }
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
 
     $fname2 = $fname_prefix.'\\'.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';

@@ -151,7 +151,7 @@ my $n_orders_old = 0; # marketDB imports
 sub import_market_db {
 	my $FH;
 	if (! open($FH, '<:crlf', $market_db_filename)) {
-		 print ">>> Open.read of \"$market_db_filename\" failed!";
+		 print ">>> Open.read of \"$market_db_filename\" failed!\n";
 		 return 0;
 	}
 	
@@ -411,7 +411,7 @@ sub import_item_db {
 	$sth->execute();	while (my $ref = $sth->fetchrow_hashref()) {
 		#print "Found a row: id=$ref->{'typeID'}, name=$ref->{'typeName'}, size=$ref->{'volume'}\n";
 
-		my $id = 	$ref->{'typeID'};
+		my $id =   $ref->{'typeID'};
 		my $name = $ref->{'typeName'};
 		my $size = $ref->{'volume'};
 		$itemDB{$id} = join('~',$name,$id,$size);
@@ -420,35 +420,9 @@ sub import_item_db {
 		$items_old{$id} = 1;	}
 	$sth->finish();
 	$dbh->disconnect();
-	#exit;
-}
-sub import_item_db2 {
-	my $FH;
-	open($FH, '<:crlf', $itemDBfilename) or die "Open.read of \"$itemDBfilename\" failed!";
-	flock($FH, LOCK_SH);
-	while (<$FH>) {
-		my ($name, $id, $size) = split('~'); chomp $size;
 
-		### known data errors
-		if ($baddata_size{$name} && $size != $baddata_size{$name}) { 
-			print ">>> correcting $name $baddata_size{$name}m3\n";
-			$size = $baddata_size{$name}; };
-
-		#say "input >ID $id, name \"$name\", size $size m^3<";
-		if (exists $itemDB{$id}) { say "itemDB conflict! >$id, $name<"; }
-		### NOTE: join character cannot exist in any item name
-		### already taken - : , ' .
-		### this leaves very few options
-		### currently tilda (~) works but this could change
-		$itemDB{$id} = join('~',$name,$id,$size);
-		$items_name{$id} = $name;
-		$items_size{$id} = $size;
-		$items_old{$id} = 1;
-		$n_imports++;
-	}
-	close $FH;
-	print "Imported item DB ($n_imports items).\n";
 }
+
 my $n_exports = 0; # itemDB exports
 sub export_item_db {
 	my $FH;
@@ -1226,8 +1200,9 @@ sub export_to_dashboard {
 sub export_shopping_list {
 	my ($take2_ref) = @_;
 	my %Take2 = %$take2_ref;
-
 	
+	### export to file
+
 	### TODO: assumes Take2 only contains 1 from/to pair
 	my @keys = keys %Take2;
 	if (0+@keys == 0) { print "shopping_list() empty\n\n"; return; }
@@ -1235,12 +1210,11 @@ sub export_shopping_list {
 	my $q_from = &loc_n2i($Take2{$i1}{from});
 	my $q_to = &loc_n2i($Take2{$i1}{to});
 
-	my $f_suffix = (lc $sys_names{$q_from})."2".(lc $sys_names{$q_to});
-	$f_suffix =~ tr/ //d;
-	my $shopping_filename = $shopping_fname_prefix.$f_suffix.".txt";
-
-	my $fh2;
-	open($fh2, '>:crlf', $shopping_filename) or die "Open.write of \"$shopping_filename\" failed!";
+	#my $fh2;
+	#my $f_suffix = (lc $sys_names{$q_from})."2".(lc $sys_names{$q_to});
+	#$f_suffix =~ tr/ //d;
+	#my $shopping_filename = $shopping_fname_prefix.$f_suffix.".txt";
+	#open($fh2, '>:crlf', $shopping_filename) or die "Open.write of \"$shopping_filename\" failed!";
 
 	### preamble = "FROM => TO hh:dd"
 	my $preamble = (uc $sys_names{$q_from})." => ".(uc $sys_names{$q_to});
@@ -1248,18 +1222,15 @@ sub export_shopping_list {
 	$preamble = $preamble." ".sprintf("%02i:%02i", ($hour+7)%24, $min);
 	#print $fh2 "$preamble\n\n";
 	print "\n$preamble\n\n";
-	#print "\n---\n\n$preamble\n\n";
 
 	### print item names only (for Copy to Clipboard)
-	print $fh2 "$preamble\n\n";
+	#print $fh2 "$preamble\n\n";
 	foreach my $id (sort {$Take2{$b}{profit} <=> $Take2{$a}{profit}} keys %Take2) {
 		my $profit = $Take2{$id}{profit};
 		if ($profit < $minTotalProfit) { next; }  ### ignore entries below the profit cutoff
-		print $fh2 "$items_name{$id}\n";
+		#print $fh2 "$items_name{$id}\n";
 	}
-	print $fh2 "\n$preamble\n\n";
-
-
+	#print $fh2 "\n$preamble\n\n";
 
 	### print underlying bid/ask offers
 	my $profit_all = 0;
@@ -1295,13 +1266,13 @@ sub export_shopping_list {
 		print $text."\n";
 		
 		#print $fh2 "$preamble\n\n";
-		print $fh2 "$items_name{$id}\n";
-		print $fh2 $n_order++."\. +\$".&comma($profit)."   [x $qty]";
+		#print $fh2 "$items_name{$id}\n";
+		#print $fh2 $n_order++."\. +\$".&comma($profit)."   [x $qty]";
 		### show warning if size above 750m3
 		#if ($qty * $size > 750) { print $fh2 " (".sprintf("%0.2f", $qty*$size)." m3)";}
 		### show warning if cost above $500M
 		#if ($cost > 500000000) { print $fh2 "  \$".sprintf("%0.2f", $cost/1000000000.0)."B cost!"; }
-		print $fh2 "\n";
+		#print $fh2 "\n";
 
 		my $w_prefix = "  ";
 
@@ -1317,10 +1288,10 @@ sub export_shopping_list {
 			my ($price, $order_qty, $rem, $when) = split(':', $x);
 			#my $ago = sprintf("%3i", ($now - $when) / 60.0)."m ago";
 			#print $w_prefix."ask ".&comma($price)." x $order_qty  \t$ago\n";
-			print $fh2 $w_prefix."ask ".&comma($price)." x $order_qty\n";
+			#print $fh2 $w_prefix."ask ".&comma($price)." x $order_qty\n";
 		}
 		#print $w_prefix."---\n";
-		print $fh2 $w_prefix."---\n";
+		#print $fh2 $w_prefix."---\n";
 		### show underlying bid orders
 		$last = -1;
 		foreach my $m (0..$#matches) {
@@ -1331,12 +1302,13 @@ sub export_shopping_list {
 			my ($price, $order_qty, $rem, $when) = split(':', $x);
 			#my $ago = sprintf("%3i", ($now - $when) / 60.0)."m ago";
 			#print $w_prefix."bid ".&comma($price)." x $order_qty  \t$ago\n";
-			print $fh2 $w_prefix."bid ".&comma($price)." x $order_qty\n";
+			#print $fh2 $w_prefix."bid ".&comma($price)." x $order_qty\n";
 		}
-
-		print $fh2 "\n";
+		#print $fh2 "\n";
 	}
-	close $fh2;
+	#close $fh2;
+	
+	### print summary to terminal
 	print "-----------------\n";
 	#print"\$".&comma($profit_all, 16)."            Total profit ($size_all m3 used, ".($maxSpace-$size_all)." m3 free)\n";
 	print"\$".&comma($profit_all, 16)."  ".&ago($when_all, $now)."          Total profit";
@@ -1509,9 +1481,9 @@ while (1) {
 	}
 	my $time_fetchall = &timer_stop("fetchall");
 
-	#&export_item_db;
 	&export_market_db;
 
+	### export "eve-shopping-amarr2dodixie.txt" files
 	foreach my $r (@routes) {
 		my ($from_id, $to_id) = @$r;
 		my $loc_from = &loc_i2n($from_id);

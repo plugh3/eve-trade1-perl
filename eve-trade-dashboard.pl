@@ -32,12 +32,10 @@ my $pid_skynet = fork;
 	system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
 	exit;
 }
-print "pid_crest  $pid_crest (orig)\n";
 $pid_crest = substr($pid_crest, 1);
-print "pid_crest  $pid_crest (adj)\n";
-print "pid_skynet $pid_skynet (orig)\n";
 $pid_skynet = substr($pid_skynet, 1);
-print "pid_skynet $pid_skynet (adj)\n";
+print "pid_crest  $pid_crest\n";
+print "pid_skynet $pid_skynet\n";
 
 
 
@@ -74,7 +72,6 @@ my $notify_threshold_age = 60*60;		### 20 min
 my $minProfitPerSize = 2000;			### $/m3
 my $minProfit = 3*1000000;			### $2.0M/item
 my $total_cost_threshold = 4*1000000000;
-my $item_db_filename = "eve-trade-itemdb.txt";
 my $cargo_filename = "eve-trade-cargo.txt";
 my $my_data_filename = "eve-trade-dashboarddata.txt";
 
@@ -1480,30 +1477,10 @@ sub import_item_db {
 	}
 	$sth->finish();
 	$dbh->disconnect();
-	#exit;
-}
-
-sub import_item_db2 {
-	### reset
-	%items_name = ();
-	%items_size = ();
-	%items_id = ();
-
-	my $FH;
-	open($FH, '<:crlf', $item_db_filename) or die "Open.read of \"$item_db_filename\" failed!";
-	flock($FH, LOCK_SH);
-	while (<$FH>) {
-		my ($name, $id, $size) = split('~'); chomp $size;
-		$items_name{$id} = $name;
-		$items_size{$id} = $size;
-		$items_id{$name} = $id;
-	}
-	close $FH;
-	#print &time2s()." import_item_db()\n";
 }
 
 
-### import cargo lists to Data[] (via Bids/Asks +  kludge)
+### import cargo lists to Data[] (via Bids/Asks + kludge)
 sub import_from_server {
 	### reset
 	%Bids = ();
@@ -1511,12 +1488,15 @@ sub import_from_server {
 	my %kludge = ();
 
 	my $FH;
-	if (! open($FH, '<:crlf', $cargo_filename)) { ### TODO: lock file
-		 print ">>> Open.read of \"$cargo_filename\" failed!";
+	print &time2s.">>> import_from_server()\n";
+	if (! open($FH, '<:crlf', $cargo_filename)) {
+		 print ">>> Open.read of \"$cargo_filename\" failed!\n";
 		 return 0;
 	}
 	flock($FH, LOCK_SH);
 	my $latest = 0;
+	
+	### populate Bids/Asks[] from cargo_filename
 	while (<$FH>) {
 		### FORMAT for market_db
 		my ($where, $id, $bidask, $price, $vol, $rem, $when, $other_loc) = split(':'); chomp $other_loc;
@@ -1549,7 +1529,8 @@ sub import_from_server {
 	}
 	close $FH;
 
-	### Data[]: sort bids/asks by route + item
+	### populate Data[] from Bids/Asks
+	### sort bids/asks by route + item
 	my $when = $latest;
 	foreach my $bid_loc (keys %kludge) {
 		
@@ -1764,6 +1745,7 @@ sub import_game_file {
 }
 
 sub export_my_data {
+	print &time2s." export_my_data()\n";
 	my $FH;
 	open($FH, '>:crlf', $my_data_filename);
 	flock($FH, LOCK_EX);
@@ -1797,47 +1779,48 @@ sub export_my_data {
 ### stomps Data[]
 sub import_my_data {
 	my $FH;
-	open($FH, '<:crlf', $my_data_filename);
-	flock($FH, LOCK_SH);
+	if (open($FH, '<:crlf', $my_data_filename)) {
+		flock($FH, LOCK_SH);
 
-	%Data = ();
+		%Data = ();
 
-	while (<$FH>) {
-		chomp;
-		my ($r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable) = split(':');
+		while (<$FH>) {
+			chomp;
+			my ($r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable) = split(':');
 
-		if (time - $modtime > $age_expire_web) { next; }
+			if (time - $modtime > $age_expire_web) { next; }
 
-		### init
-		if (! $Data{$r}) { $Data{$r} = (); }
-		if (! $Data{$r}{$i}) { 
-			$Data{$r}{$i}{Route} = $r;
-			$Data{$r}{$i}{Item} = $i;
-			my ($ask_loc, $bid_loc) = &route2locs ($r);
-			$Data{$r}{$i}{From} = $ask_loc;
-			$Data{$r}{$i}{To} = $bid_loc;
-			$Data{$r}{$i}{Ignore} = 0;
-			$Data{$r}{$i}{Asks} = ();
-			$Data{$r}{$i}{Asks_Age} = 0;
-			$Data{$r}{$i}{Asks_Reliable} = 0;
-			$Data{$r}{$i}{Bids} = ();
-			$Data{$r}{$i}{Bids_Age} = 0;
-			$Data{$r}{$i}{Bids_Reliable} = 0;
+			### init
+			if (! $Data{$r}) { $Data{$r} = (); }
+			if (! $Data{$r}{$i}) { 
+				$Data{$r}{$i}{Route} = $r;
+				$Data{$r}{$i}{Item} = $i;
+				my ($ask_loc, $bid_loc) = &route2locs ($r);
+				$Data{$r}{$i}{From} = $ask_loc;
+				$Data{$r}{$i}{To} = $bid_loc;
+				$Data{$r}{$i}{Ignore} = 0;
+				$Data{$r}{$i}{Asks} = ();
+				$Data{$r}{$i}{Asks_Age} = 0;
+				$Data{$r}{$i}{Asks_Reliable} = 0;
+				$Data{$r}{$i}{Bids} = ();
+				$Data{$r}{$i}{Bids_Age} = 0;
+				$Data{$r}{$i}{Bids_Reliable} = 0;
+			}
+
+			### populate bid/ask order
+			my $x = join(':', $price, $vol, $flag_ignore, $modtime);
+			if ($bidask eq 'ask') {
+				push (@{$Data{$r}{$i}{Asks}}, $x);
+				$Data{$r}{$i}{Asks_Age} = &max($Data{$r}{$i}{Asks_Age}, $modtime);
+				$Data{$r}{$i}{Asks_Reliable} = $flag_reliable;	
+			} else {
+				push (@{$Data{$r}{$i}{Bids}}, $x);
+				$Data{$r}{$i}{Bids_Age} = &max($Data{$r}{$i}{Bids_Age}, $modtime);
+				$Data{$r}{$i}{Bids_Reliable} = $flag_reliable;
+			}
 		}
-
-		### populate bid/ask order
-		my $x = join(':', $price, $vol, $flag_ignore, $modtime);
-		if ($bidask eq 'ask') {
-			push (@{$Data{$r}{$i}{Asks}}, $x);
-			$Data{$r}{$i}{Asks_Age} = &max($Data{$r}{$i}{Asks_Age}, $modtime);
-			$Data{$r}{$i}{Asks_Reliable} = $flag_reliable;	
-		} else {
-			push (@{$Data{$r}{$i}{Bids}}, $x);
-			$Data{$r}{$i}{Bids_Age} = &max($Data{$r}{$i}{Bids_Age}, $modtime);
-			$Data{$r}{$i}{Bids_Reliable} = $flag_reliable;
-		}
+		close $FH;
 	}
-	close $FH;
 }
 
 
@@ -2460,7 +2443,7 @@ sub refresh_server_data {
 
 	### check if server data has changed
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
-	if (($last_update_server < $mtime) or $force_refresh) {
+	if ($mtime and (($last_update_server < $mtime) or $force_refresh)) {
 
 		### import data from server
 		print &time2s." refresh(): last ".sprintf("%3i", (time - $last_update_server))."s ago, file mod ".(time - $mtime)."s ago\n";
@@ -2596,15 +2579,13 @@ sub import_from_game {
 &refresh_server_data(); 
 &export_crest_reqs();
 
-my $repeat1 = $w1->repeat(3000, \&refresh_server_data);
+my $repeat1 = $w1->repeat( 3000, \&refresh_server_data);
 my $repeat2 = $w1->repeat(20000, \&notify_refresh);
-my $repeat3 = $w1->repeat(3000, \&refresh_game_data);
-my $repeat4 = $w1->repeat(3000, \&export_crest_reqs);
+my $repeat3 = $w1->repeat( 3000, \&refresh_game_data);
+my $repeat4 = $w1->repeat( 3000, \&export_crest_reqs);
 #$w1->repeat($glow_ms, \&test_refresh);
 ### HOWTO: cancel a repeating process
 #$repeat2->cancel(); # yep
-
-
 
 
 
@@ -2657,8 +2638,6 @@ my $imgclose = $mw->Getimage('plus');
 #my $path = 'Jita -> Amarr';
 #unshift(@{$w1->{Images}},[$path,$imgopen,$imgclose]);
 #my $img = $w->_indicator_image( $ent );
-
-
 
 
 
