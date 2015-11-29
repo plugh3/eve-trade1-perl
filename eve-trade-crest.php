@@ -235,7 +235,7 @@ function getExportFilename($row)
     $fname_prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs';
     //$fname_region2 = $handler->getRegion($reg_id)->name;
     $fname_time = date("Y.m.d His", time() - 300);
-    if (!$fname_item) { echo ">>> malformed fname region=$fname_region, item=$fname_item[$item_id]; >$row<\n"; continue; }
+    if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
 
     $fname2 = $fname_prefix.'\\'.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';

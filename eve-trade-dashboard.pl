@@ -406,7 +406,7 @@ my $sort_dec = 1;
 sub rotate_sort {
 	my ($col_new) = @_;
 
-	print &time2s." rotate_sort(): sort by ".$w1->headerCget($col_new, -text)."\n";
+	print &time2s()." rotate_sort(): sort by ".$w1->headerCget($col_new, -text)."\n";
 	### only legal for certain columns
 	if ($col_new != $col_item &&
 	    $col_new != $col_profit &&
@@ -842,7 +842,7 @@ sub fn_iterate {
 	&copy2clip_iterate();
 	if ($p_cycle eq $p_cycle_first) {
 		$h_cycle->cancel();
-		print &time2s." iterate() cycle ended\n";
+		print &time2s()." iterate() cycle ended\n";
 		$p_cycle = '';
 		$mw->bell;
 		&redraw();
@@ -1458,6 +1458,7 @@ sub output_route {
 
 use DBI;
 sub import_item_db {
+	print &time2s()." import_item_db()\n";
 	my $username = "dev";
 	my $password = "BNxJYjXbYXQHAvFM";
 	my $db_params = "DBI:mysql:database=evesdd;host=127.0.0.1;port=3306";
@@ -1466,7 +1467,7 @@ sub import_item_db {
 	my $sth = $dbh->prepare("SELECT typeID, typeName, volume FROM invtypes");
 	$sth->execute();
 	while (my $ref = $sth->fetchrow_hashref()) {
-		#print "Found a row: id=$ref->{'typeID'}, name=$ref->{'typeName'}, size=$ref->{'volume'}\n";
+		#print "mysql import ITEMS: id=$ref->{'typeID'}, name=$ref->{'typeName'}, size=$ref->{'volume'}\n";
 
 		my $id =   $ref->{'typeID'};
 		my $name = $ref->{'typeName'};
@@ -1488,10 +1489,16 @@ sub import_from_server {
 	my %kludge = ();
 
 	my $FH;
-	print &time2s.">>> import_from_server()\n";
-	if (! open($FH, '<:crlf', $cargo_filename)) {
-		 print ">>> Open.read of \"$cargo_filename\" failed!\n";
-		 return 0;
+	print &time2s()." import_from_server()\n";
+	if(not open($FH, '<:crlf', $cargo_filename)) {
+		print &time2s().">>> fopen() \"$cargo_filename\" failed\n";
+		return;
+	}
+
+	### workaround: wait until cargo file is ready
+	while (not open($FH, '<:crlf', $cargo_filename)) {
+		print &time2s()."fopen() \"$cargo_filename\" failed\n";
+		sleep 1;
 	}
 	flock($FH, LOCK_SH);
 	my $latest = 0;
@@ -1583,7 +1590,7 @@ sub import_from_server {
 			}
 		}
 	}
-	#print &time2s." import_cargo_lists()\n";
+	#print &time2s()." import_cargo_lists()\n";
 }
 
 sub dup_order {
@@ -1745,7 +1752,7 @@ sub import_game_file {
 }
 
 sub export_my_data {
-	print &time2s." export_my_data()\n";
+	print &time2s()." export_my_data()\n";
 	my $FH;
 	open($FH, '>:crlf', $my_data_filename);
 	flock($FH, LOCK_EX);
@@ -1771,7 +1778,7 @@ sub export_my_data {
 		}
 	}
 	close $FH;
-	print &time2s." export_my_data()\n";
+	print &time2s()." export_my_data()\n";
 }
 
 
@@ -2415,6 +2422,7 @@ sub export_crest_reqs {
 		foreach my $reg (sort keys %reqs) {
 			foreach my $item (sort { ($a+0) <=> ($b+0) } keys %{$reqs{$reg}}) {
 				foreach my $is_bid (keys %{$reqs{$reg}{$item}}) {
+					if (not $items_name{$item}) { print ">>> missing item name $item\n"; } # CSS
 					$text .= join('~', $reg, $reg_i2n{$reg}, $item, $items_name{$item}, $is_bid)."\n";
 					$nreqs++;
 				}
@@ -2439,17 +2447,20 @@ sub export_crest_reqs {
 ### refresh(): update loop, called every 1 sec
 my $last_update_server = 0;
 sub refresh_server_data {
+	print &time2s()." refresh_server_data()\n";
 	my ($force_refresh) = @_;
 
 	### check if server data has changed
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
-	if ($mtime and (($last_update_server < $mtime) or $force_refresh)) {
+	if (not $mtime) { print &time2s()." no cargo file\n"; }
+	if (($mtime and ($last_update_server < $mtime)) or $force_refresh) {
 
 		### import data from server
-		print &time2s." refresh(): last ".sprintf("%3i", (time - $last_update_server))."s ago, file mod ".(time - $mtime)."s ago\n";
+		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
+		my $mod_ago = (defined $mtime) ? ((time - $mtime)."s ago") : ("never");
+		print &time2s()." dash.refresh_server_data(): last $update_ago, file mod $mod_ago\n";
 		$last_update_server = time;
-		&import_item_db;
-		&import_from_server;
+		&import_from_server();
 		&import_from_game();
 
 		### draw from data
@@ -2492,7 +2503,7 @@ sub import_from_game {
 			my $item = $+{item};
 			if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
 			if (! $items_id{$item} ) {
-				print &time2s." import_from_game(): unknown item, file $fname\n";
+				print &time2s()." import_from_game(): unknown item, file $fname\n";
 				next;
 			}
 			my $id = $items_id{$item};
@@ -2572,11 +2583,13 @@ sub import_from_game {
 	return $Redraw;
 }
 
-#sub ping_local_market_cache
+
+
 
 ### main()
+&import_item_db;
 &import_my_data();
-&refresh_server_data(); 
+&refresh_server_data(1); 
 &export_crest_reqs();
 
 my $repeat1 = $w1->repeat( 3000, \&refresh_server_data);
@@ -2584,8 +2597,7 @@ my $repeat2 = $w1->repeat(20000, \&notify_refresh);
 my $repeat3 = $w1->repeat( 3000, \&refresh_game_data);
 my $repeat4 = $w1->repeat( 3000, \&export_crest_reqs);
 #$w1->repeat($glow_ms, \&test_refresh);
-### HOWTO: cancel a repeating process
-#$repeat2->cancel(); # yep
+#$repeat2->cancel(); # HOWTO: cancel a repeating process
 
 
 
