@@ -36,8 +36,8 @@ class Config
     protected static $cachePrefix = 'iveeCrest_';
 
     //CREST config
-    protected static $crestBaseUrl       = 'https://crest-tq.eveonline.com/';
-    //protected static $crestBaseUrl       = 'https://public-crest.eveonline.com/';
+    //protected static $crestBaseUrl       = 'https://crest-tq.eveonline.com/';
+    protected static $crestBaseUrl       = 'https://public-crest.eveonline.com/'; // no-auth CREST
     protected static $clientId           = 'e5a122800a134da2ad4b0e01664b627b';
     protected static $clientSecret       = 'YQ5iCxkAL3KjBCk9djCDKKJlsm9IJmZlqRQHycSb';
     protected static $clientRefreshToken = '2-X4wdpBzGMTkpy8bdk0jg-gi6YfwVWyp_G9PbJtAME1';

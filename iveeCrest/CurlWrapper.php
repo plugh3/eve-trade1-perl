@@ -97,7 +97,7 @@ class CurlWrapper
             if (strpos($uri, 'oauth/token') !== false) { throw new \iveeCrest\Exceptions\KeyNotFoundInCacheException('new access token'); }
 
             $ret = $this->cache->getItem($responseKey);
-            echo time2s()."post(cache) $uri\n";
+            echo time2s()."cw.post(cache) $uri\n";
             return $ret;
         } catch (Exceptions\KeyNotFoundInCacheException $e) {
             //url-ify the data for the POST
@@ -116,7 +116,7 @@ class CurlWrapper
                 CURLOPT_HTTPHEADER      => $header,
                 CURLOPT_HEADERFUNCTION  => array($response, 'handleCurlHeaderLine')
             );
-            echo time2s()."post(fetch) $uri\n";
+            echo time2s()."cw.post(fetch) $uri\n";
             if (strpos($uri, 'oauth/token') !== false) { 
                 //var_dump($header);
                 //var_dump($fields);
@@ -152,7 +152,7 @@ class CurlWrapper
             
             $ttl1 = $ret->getCacheTTL();
             if (true || strpos($uri, "/regions/") === false)
-                echo time2s()."get(cache)  TTL=".($ttl1)." $uri\n";
+                echo time2s()."cw.get(cache)  TTL=".($ttl1)." $uri\n";
             return $ret;
         } catch (Exceptions\KeyNotFoundInCacheException $e) {
             $responseClass = Config::getIveeClassName('Response');
@@ -164,7 +164,7 @@ class CurlWrapper
                 CURLOPT_HTTPHEADER      => $header,
                 CURLOPT_HEADERFUNCTION  => array($response, 'handleCurlHeaderLine')
             );
-            echo time2s()."get(fetch)  $uri\n";
+            echo time2s()."cw.get(fetch)  $uri\n";
             $this->doRequest($curlOptions, $response);
             return $response;
         }

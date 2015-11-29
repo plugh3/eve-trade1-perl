@@ -133,7 +133,7 @@ class EndpointHandler
      */
     public function getMarketTypes()
     {
-        //echo "handler.getMarketTypes()\n";
+        //echo time2s()."eh.getMarketTypes()\n";
         return $this->client->gatherCached(
             $this->client->getRootEndpoint()->marketTypes->href,
             function ($marketType) {
@@ -151,7 +151,7 @@ class EndpointHandler
      */
     public function getMarketTypeHrefs()
     {
-        //echo "handler.getMarketTypeHrefs()\n";
+        //echo time2s()."eh.getMarketTypeHrefs()\n";
         if (!isset($this->marketTypeHrefs)) {
             //gather all the pages into one compact array, indexed by item id
             $this->marketTypeHrefs = $this->client->gatherCached(
@@ -177,7 +177,7 @@ class EndpointHandler
      */
     public function getRegions()
     {
-       //echo "handler.getRegions()\n";
+       //echo time2s()."eh.getRegions()\n";
        return $this->client->gatherCached(
             $this->client->getRootEndpoint()->regions->href,
             function ($region) {
@@ -330,7 +330,7 @@ class EndpointHandler
      */
     public function getMarketOrders($typeId, $regionId)
     {
-        //echo "handler.getMarketOrders()\n";
+        //echo time2s()."eh.getMarketOrders()\n";
         $region = $this->getRegion($regionId);
         $marketTypeHrefs = $this->getMarketTypeHrefs();
         if (!isset($marketTypeHrefs[$typeId])) {
@@ -356,7 +356,7 @@ class EndpointHandler
     }
     public function getMarketSellOrders($typeId, $regionId)
     {
-        //echo "handler.getMarketOrders()\n";
+        //echo time2s()."eh.getMarketOrders()\n";
         $region = $this->getRegion($regionId);
         $marketTypeHrefs = $this->getMarketTypeHrefs();
         if (!isset($marketTypeHrefs[$typeId])) {
@@ -376,7 +376,7 @@ class EndpointHandler
     }
     public function getMarketBuyOrders($typeId, $regionId)
     {
-        //echo "handler.getMarketOrders()\n";
+        //echo time2s()."eh.getMarketOrders()\n";
         $region = $this->getRegion($regionId);
         $marketTypeHrefs = $this->getMarketTypeHrefs();
         if (!isset($marketTypeHrefs[$typeId])) {
@@ -413,7 +413,7 @@ class EndpointHandler
     public function getMultiMarketOrders(array $typeIds, $regionId, callable $callback, callable $errCallback = null,
         $cache = true
     ) {
-        //echo "handler.getMultiMarketOrders()\n";
+        //echo time2s()."eh.getMultiMarketOrders()\n";
         //check for wormhole regions
         if ($regionId > 11000000) {
             $invalidArgumentExceptionClass = Config::getIveeClassName('InvalidArgumentException');
@@ -532,7 +532,7 @@ class EndpointHandler
      */
     public function getMarketPrices()
     {
-        //echo "handler.getMarketPrices()\n";
+        //echo time2s()."eh.getMarketPrices()\n";
         return $this->client->gatherCached(
             $this->client->getRootEndpoint()->marketPrices->href,
             function ($price) {
@@ -567,7 +567,7 @@ class EndpointHandler
      */
     public function getItemGroups()
     {
-        //echo "handler.getItemGroups()\n";
+        //echo time2s()."eh.getItemGroups()\n";
         return $this->client->gatherCached(
             $this->client->getRootEndpoint()->itemGroups->href,
             function ($group) {
@@ -647,7 +647,7 @@ class EndpointHandler
      */
     public function getItemTypes()
     {
-        //echo "handler.getItemTypes()\n";
+        //echo time2s()."eh.getItemTypes()\n";
         return $this->client->gatherCached(
             $this->client->getRootEndpoint()->itemTypes->href,
             function ($type) {
@@ -726,7 +726,7 @@ class EndpointHandler
      */
     public function getMarketGroups()
     {
-        //echo "handler.getMarketGroups()\n";
+        //echo time2s()."eh.getMarketGroups()\n";
         return $this->client->gatherCached(
             $this->client->getRootEndpoint()->marketGroups->href,
             function ($group) {
@@ -746,7 +746,7 @@ class EndpointHandler
      */
     public function getMarketGroup($marketGroupId)
     {
-        //echo "handler.getMarketGroup()\n";
+        //echo time2s()."eh.getMarketGroup()\n";
         $marketGroups = $this->getMarketGroups();
         if (!isset($marketGroups[$marketGroupId])) {
             $invalidArgumentExceptionClass = Config::getIveeClassName('InvalidArgumentException');
@@ -771,7 +771,7 @@ class EndpointHandler
      */
     public function getMarketGroupTypes($marketGroupId)
     {
-        //echo "handler.getMarketGroupTypes()\n";
+        //echo time2s()."eh.getMarketGroupTypes()\n";
         return $this->client->gatherCached(
             $this->getMarketGroup($marketGroupId)->types->href,
             function ($type) {

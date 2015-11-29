@@ -145,8 +145,9 @@ class Client
      */
     protected function getBearerAuthHeader()
     {
-        //echo time2s()."client.getBearerAuthHeader() ".$this->getAccessToken()."\n";
-        return array('Authorization: Bearer ' . $this->getAccessToken());
+        //echo time2s()."cl.getBearerAuthHeader()\n";
+        //return array('Authorization: Bearer ' . $this->getAccessToken());
+        return array(); // no-auth CREST
     }
 
     /**
@@ -169,7 +170,7 @@ class Client
      */
     protected function getAccessToken()
     {
-        //echo time2s()."client.getAccessToken()\n";
+        //echo time2s()."cl.getAccessToken()\n";
         //if we don't have an access token, get one
         if (!isset($this->charAccessToken) OR time() >= $this->charAccessTokenExpiry) {
             $accessTokenResponse = $this->cw->post(
@@ -179,9 +180,9 @@ class Client
             );
             $this->charAccessToken = $accessTokenResponse->content->access_token;
             $this->charAccessTokenExpiry = time() + $accessTokenResponse->content->expires_in - 10;
-            echo time2s()."getAccessToken() renewed, expires in ".$accessTokenResponse->content->expires_in.", new token ".$this->charAccessToken."\n";
+            echo time2s()."cl.getAccessToken() renewed, expires in ".$accessTokenResponse->content->expires_in.", new token ".$this->charAccessToken."\n";
         } else {
-            //echo time2s()."getAccessToken() not yet expired\n";
+            //echo time2s()."cl.getAccessToken() not yet expired\n";
         }
         return $this->charAccessToken;
     }
@@ -212,7 +213,7 @@ class Client
     protected function getAccessToken2()
     {
         //get new access token regardless 
-        //echo "\n".time2s().">>> getAccessToken2() override!!!!\n\n";
+        echo "\n>>>".time2s()."cl.getAccessToken2()\n";
         $accessTokenResponse = $this->cw->post(
             $this->getRootEndpoint()->authEndpoint->href, 
             $this->getBasicAuthHeader(), 
@@ -220,7 +221,7 @@ class Client
         );
         $this->charAccessToken = $accessTokenResponse->content->access_token;
         $this->charAccessTokenExpiry = time() + $accessTokenResponse->content->expires_in - 10;
-        echo time2s()."getAccessToken2() renewed, expires in ".$accessTokenResponse->content->expires_in.", new token ".$this->charAccessToken."\n";
+        echo time2s()."cl.getAccessToken2() renewed, expires in ".$accessTokenResponse->content->expires_in.", new token ".$this->charAccessToken."\n";
         return $this->charAccessToken;
     }
 
@@ -236,7 +237,7 @@ class Client
     public function getEndpointResponse($url, $auth = false, $accept = null)
     {
         if($auth)
-            $header = $this->getBearerAuthHeader();
+            $header = $this->getBearerAuthHeader(); 
         else
             $header = array();
 
@@ -249,9 +250,9 @@ class Client
             $match = 'Authentication needed, bad token';
             if (strpos($e->getMessage(), $match) !== false)
             {
-                echo "caught exception, token expired\n";
+                echo time2s()."cl.getEndpointResponse() exception: token expired\n";
                 $token = $this->getAccessToken2();
-                echo "new token $token\n";
+                echo time2s()."cl.getEndpointResponse() new token $token\n";
                 $header = array('Authorization: Bearer ' . $token);
                 if(isset($accept))
                     $header[] = 'Accept: application/' . $accept;
@@ -296,9 +297,10 @@ class Client
      */
     public function gather($endpointHref, callable $indexFunc = null, callable $elementFunc = null, $accept = null)
     {
-        if (strpos($endpointHref, 'https://crest-tq.eveonline.com/market/types') !== false)
+        //if (strpos($endpointHref, 'https://crest-tq.eveonline.com/market/types') !== false)
+        if (strpos($endpointHref, 'https://public-crest.eveonline.com/market/types') !== false)
         {
-            //echo "client.gather(mktTypes):";
+            //echo time2s()."cl.gather(mktTypes)\n";
             //echo " indexFunc="; echo ($indexFunc == null) ? '(null)' : 'defined';
             //echo " elementFunc="; echo ($elementFunc == null) ? '(null)' : 'defined';
             //echo " accept="; echo ($elementFunc == null) ? '(null)' : 'defined';
@@ -306,7 +308,7 @@ class Client
         }
         else
         {
-            //echo "client.gather()\n";
+            //echo time2s()."cl.gather()\n";
         }
         
         
@@ -339,7 +341,11 @@ class Client
                 
                 // HACK: for /market/types/?page=[2-N], do async multiget
                 // multiget faster (5-18s) vs. 11 sequential gets (21-29s)
-                $prefix = 'https://crest-tq.eveonline.com/market/types/?page=';
+                //$prefix = 'https://crest-tq.eveonline.com/market/types/?page=';
+                //$prefix = 'https://public-crest.eveonline.com/market/types/?page='; // no-auth CREST
+                $base = Config::getCrestBaseUrl();
+                $prefix = $base.'market/types/?page=';
+                
                 if (strpos($href, $prefix.'2') !== false)
                 {
                     $hrefs = array();
@@ -359,7 +365,7 @@ class Client
                                     $ret[$indexFunc($item2)] = $element2;
                             }
                         }, 
-                        function (Response $res) { echo "callbackErrMarketType()\n"; var_dump($res); }, //errCallback
+                        function (Response $res) { echo time2s().">>> cl.gather().callbackErrMarketType()\n"; var_dump($res); }, //errCallback
                         $accept
                     );
                     break;
@@ -389,7 +395,7 @@ class Client
     public function gatherCached($endpointHref, callable $indexFunc = null, callable $elementFunc = null, 
         $accept = null, $ttl = 3600, $subCommandKey = null
     ) {
-        //echo "client.gatherCached()\n";
+        //echo time2s()."cl.gatherCached($endpointHref)\n";
         $dataKey = 'gathered:' . $endpointHref . (isset($subCommandKey) ? ',' . $subCommandKey : '');
         //we introduce another caching layer here because gathering and reindexing multipage data is expensive, even
         //when the individual CREST responses are already cached.
@@ -445,7 +451,7 @@ class Client
     public function asyncGetMultiEndpointResponses(array $hrefs, callable $callback, callable $errCallback = null,
         $accept = null, $cache = true
     ) {
-        //echo time2s()."client.asyncGetMultiEndpointResponses()\n";
+        //echo time2s()."cl.asyncGetMultiEndpointResponses()\n";
         $header = array();
         if(isset($accept))
             $header[] = 'Accept: application/' . $accept;
@@ -473,12 +479,12 @@ class Client
     //
     public function exportCache($fname)
     {
-        //echo time2s()."client.exportCache()\n";
+        //echo time2s()."cl.exportCache()\n";
         $this->cache->exportCache($fname);
     }
     public function importCache($fname)
     {
-        //echo time2s()."client.importCache()\n";
+        //echo time2s()."cl.importCache()\n";
         $this->cache->importCache($fname);
     }
     public function printCache()

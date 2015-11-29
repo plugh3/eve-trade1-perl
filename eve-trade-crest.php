@@ -11,6 +11,7 @@ $client = new iveeCrest\Client(
     iveeCrest\Config::getUserAgent(),
     iveeCrest\Config::getClientRefreshToken()
 );
+$export_prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\';
 
 
 //instantiate an endpoint handler
@@ -106,7 +107,7 @@ while (1)
     flock($fh, LOCK_UN);
     fclose($fh);
 
-    if (count($rowsRaw) == 0) { if (!$last_empty) { echo time2s()."(empty request list)\n"; $last_empty = 1;} } 
+    if (count($rowsRaw) == 0) { if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} } 
     else { $last_empty = 0; }
 
     // aggregate rows by region => rowsByRegion[][]
@@ -147,7 +148,7 @@ while (1)
         }
 
         // populate Orders[reg][item][]
-        echo time2s()."getMulti(".count($typeIds).") region=$reg_id\n";
+        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id\n";
         $handler->getMultiMarketOrders(
             $typeIds, 
             $reg_id2, 
@@ -162,8 +163,8 @@ while (1)
                 $sep = '~'; // TODO: use global instead
                 list($reg_id, $reg_name, $item_id2, $item_name, $is_bid) = explode($sep, $row);
 
-                $prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\';
-                $fname_short = substr($fname2, strpos($fname2, $prefix) + strlen($prefix));
+                global $export_prefix;
+                $fname_short = substr($fname2, strpos($fname2, $export_prefix) + strlen($export_prefix));
 
 
                 // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
@@ -187,7 +188,7 @@ while (1)
             },
             function (\iveeCrest\Response $response) use ($rowByItem)
             {
-                echo ">>> multiGet ERROR...\n";
+                echo time2s().">>> php.multiGet ERROR...\n";
                 var_dump($response);
                 //exit;
             }
@@ -195,6 +196,7 @@ while (1)
     }
     
     // export to Marketlogs files
+    $nexports = 0;
     foreach ($Orders as $reg_id => $Orders2) {
         foreach ($Orders2 as $i => $obj) {
             $row = $obj->row;
@@ -203,20 +205,22 @@ while (1)
             $fname2 = getExportFilename($row);
 
             $n = count(explode("\n", $text))-1;
-            $prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\';
-            $fname_short = substr($fname2, strpos($fname2, $prefix) + strlen($prefix));
+            $fname_short = substr($fname2, strpos($fname2, $export_prefix) + strlen($export_prefix));
             //echo time2s()."export (x$n) $fname_short\n";
 
             export($fname2, $text);
+            $nexports++;
         }
     }
+    echo time2s()."php.export($nexports)\n";
     
     //echo time2s()."sleeping 60 secs...\n";
     sleep(1);
 }
 function url2item($url)
 {
-    $match = '?type=https://crest-tq.eveonline.com/types/';
+    $base = iveeCrest\Config::getCrestBaseUrl();
+    $match = '?type='.$base.'types/'; 
     if (strpos($url, $match) === false) return 0;
     $item_id = substr($url, strpos($url, $match) + strlen($match));
     $item_id = substr($item_id, 0, strlen($item_id) - 1);
@@ -228,27 +232,30 @@ function url2buy($url)
 }
 function getExportFilename($row)
 {
-    global $sep, $item_iname2fname;
+    global $sep;
+    global $item_iname2fname;
+    global $export_prefix;
+
     list($reg_id, $fname_region, $item_id, $fname_item, $is_bid) = explode($sep, $row);
 
     // construct export filename
-    $fname_prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs';
     //$fname_region2 = $handler->getRegion($reg_id)->name;
     $fname_time = date("Y.m.d His", time() - 300);
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
 
-    $fname2 = $fname_prefix.'\\'.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
-    $fname2 = str_replace("/", "_", $fname2);
+    $fname2 = $export_prefix.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
+    $fname2 = str_replace("/", "_", $fname2); // hacky
     return $fname2;        
 }
 function export($fname, $text)
 {
-    $prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\';
-    $fname_short = substr($fname, strpos($fname, $prefix) + strlen($prefix));
+    global $export_prefix;
+
+    $fname_short = substr($fname, strpos($fname, $export_prefix) + strlen($export_prefix));
     $n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
     $fname_short2 = $match[1];
-    echo time2s()."export $fname_short2\n";
+    //echo time2s()."crest-php.export() \"$fname_short2\"\n";
     $fh = fopen($fname, 'w') or die("Failed to open $fname");
     flock($fh, LOCK_EX);
     fwrite($fh, $text);
@@ -292,5 +299,5 @@ function formatOrders($orders, $reg_id)
 function time2s($time = '')
 {
     if ($time == '') { $time = time(); }
-    return date("H:i:s ", $time - 7*60*60);
+    return date("h:i:sa ", $time - 7*60*60);
 }

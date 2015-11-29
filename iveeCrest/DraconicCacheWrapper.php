@@ -218,13 +218,12 @@ class DraconicCacheWrapper implements ICache
     {
         echo time2s()."cache.importCache() $fname\n";
 
-        $fh = fopen($fname, 'r');
-        if ($fh === false) 
-        { 
-            echo "importCache() failed to open $fname\n";
+        if (!file_exists($fname)) {
+            echo time2s()."dc.importCache() no cache file $fname\n";
             return; 
         }
         
+        $fh = fopen($fname, 'r');
         flock($fh, LOCK_EX);
         $text = fread($fh, filesize($fname));
         flock($fh, LOCK_UN);

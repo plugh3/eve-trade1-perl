@@ -1491,7 +1491,7 @@ sub import_from_server {
 	my $FH;
 	print &time2s()." import_from_server()\n";
 	if(not open($FH, '<:crlf', $cargo_filename)) {
-		print &time2s().">>> fopen() \"$cargo_filename\" failed\n";
+		print &time2s()." import_from_server(): no cargo file \"$cargo_filename\"\n";
 		return;
 	}
 
@@ -1651,7 +1651,7 @@ sub import_game_file {
 	my $item = $+{item};
 	if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
 	my $id = $items_id{$item};
-	print &time2s()." import() ".sprintf("%-13s", "[".$reg."]")." $item\n";
+	#print &time2s()." import() ".sprintf("%-13s", "[".$reg."]")." $item\n";
 
 	my @bids = ();
 	my @asks = ();
@@ -2541,6 +2541,7 @@ sub import_from_game {
 	### compare game files to live data
 	### for each route, for each item, if there is a file for that item at From or To, import it 
 	$Redraw = 0;
+	my $nimports = 0;
 	foreach my $r (keys %Data) {
 		my ($from_s, $to_s) = split(' -> ', $r);
 		my $from_r = $sys2reg{$from_s};
@@ -2558,6 +2559,7 @@ sub import_from_game {
 				{
 					&import_game_file($fname, $modtime);
 					$Redraw = 1;
+					$nimports++;
 				} else {
 					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Asks_Reliable} ? 'game' : 'html')." data (asks) \n";
 				}
@@ -2573,13 +2575,14 @@ sub import_from_game {
 				{
 					&import_game_file($fname, $modtime);
 					$Redraw = 1;
+					$nimports++;
 				} else {
 					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Bids_Reliable} ? 'game' : 'html')." data (bids)\n";
 				}
 			}
 		}
 	}
-	
+	print &time2s()." import_marketlogs($nimports)\n";
 	return $Redraw;
 }
 
