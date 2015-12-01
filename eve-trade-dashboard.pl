@@ -19,23 +19,36 @@ use Fcntl qw(:DEFAULT :flock);
 
 
 
-### spawn daemons: (1) CREST, (2) skynet
+
+### start mysql
+my $procs = `tasklist`;
+if (not ($procs =~ m/mysqld/)) {
+	system("start C:\\xampp\\xampp-control.exe"); ## new window
+	print "Waiting for MySQL to start...";
+	while (not (`tasklist` =~ m/mysqld/)) { sleep 1; }
+	print "done.\n";
+}
+
+### spawn crest daemon
 my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
-	system("run-crest.bat"); ## same window
+	#system("run-crest.bat"); ## same window
+	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
 	exit;
 }
+$pid_crest = substr($pid_crest, 1);
+#print "pid_crest  $pid_crest\n";
+
+### spawn skynet daemon
 my $pid_skynet = fork;
  if (!$pid_skynet) {
 	### skynet (evecentral + marketlogs gets)
 	system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
 	exit;
 }
-$pid_crest = substr($pid_crest, 1);
 $pid_skynet = substr($pid_skynet, 1);
-print "pid_crest  $pid_crest\n";
-print "pid_skynet $pid_skynet\n";
+#print "pid_skynet $pid_skynet\n";
 
 
 
@@ -56,7 +69,6 @@ my %Asks;
 my %Notify = ();
 my $N_items;
 my $N_orders;
-
 
 
 ### GLOBAL CONSTANTS ###
@@ -772,9 +784,7 @@ sub notify_refresh {
 
 	}
 	
-	$w_notify->insert('end', "parent \t$$\n");
-	$w_notify->insert('end', "pid_crest \t$pid_crest\n");
-	$w_notify->insert('end', "pid_skynet \t$pid_skynet\n");
+	#$w_notify->insert('end', "pid_crest \t$pid_crest\n");
 }
 foreach ($color_urgent_red, $color_urgent_orange, $color_urgent_yellow, $color_fg) {
 	$w_notify->tagConfigure($_, -foreground => $_);
@@ -1367,10 +1377,22 @@ sub print_all_config {
 
 
 
-
+sub size2expanders {
+	my ($size) = @_;
+	if ($size > 7012) {
+		return 3;
+	} elsif ($size > 5478) {
+		return 2;
+	} elsif ($size > 4275) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
 
 ### REAL FNS ###
 
+### copy manifest to clipboard
 sub output_route {
 	my ($r) = @_;
 	$r =~ m/(.*) -\> (.*)/;
@@ -1382,7 +1404,7 @@ sub output_route {
 	### force recalc(), which filters out unprofitable bid/ask orders
 	&redraw();
 	
-	### bare item list (for copy/paste)
+	### OUTPUT: list of item names, alphabetized (for copy/paste)
 	my @list = ();
 	foreach my $i (sort {$Data{$r}{$b}{Profit} <=> $Data{$r}{$a}{Profit}} (keys %{$Data{$r}})) {
 		if ($Data{$r}{$i}{Ignore}) { next; }
@@ -1400,15 +1422,32 @@ sub output_route {
 		$text.= $_.$eol;
 	}
 
-	### timestamp
+
+	### OUTPUT (header)
 	$text.= $eol.$eol;
+	### OUTPUT: route name (ex "JITA => AMARR")
 	$text.= (uc $from_s)." => ".(uc $to_s);
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-	$text.= " ".sprintf("%02i:%02i", ($hour+7)%24, $min);
-	$text.= " +\$".&comma($Totals{$r}{Profit});
+	### OUTPUT: total profit (ex: "+$101,648,363.99")
+	$text.= "  +\$".&comma($Totals{$r}{Profit});
 	#$text.= " (".sprintf("%.1f", $Totals{$r}{Profit}*100.0/$Totals{$r}{Cost})."% ROI)";
-	$text.= " (".&commai($Totals{$r}{Size})." m3)";
+	### OUTPUT: size (ex: "(5,063 m3 x2**)")
+	my $size = $Totals{$r}{Size};
+	my $text_mods = "";
+	my $nmods = &size2expanders($size);
+	if ($nmods) {
+		$text_mods = "  [ *";
+		for (my $i=2; $i<=$nmods; $i++) {
+			$text_mods .= " *";
+		}
+		$text_mods .= " ]";
+	}
+	$text.= "  (".&commai($Totals{$r}{Size})." m3)".$text_mods;
 	$text.= $eol;
+	### OUTPUT: timestamp (ex "19:10")
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+	$text.= sprintf("%02i:%02i", ($hour+8)%24, $min);
+	$text.= $eol;
+
 
 	### bid/ask lists
 	my $n_items = 1;
@@ -1429,7 +1468,7 @@ sub output_route {
 		foreach my $ask (@{$Data{$r}{$i}{Asks}}) {
 			my ($price, $vol, $ignore, $when) = split(':', $ask);
 			if (! $ask_hi) { $ask_hi = $price; }
-			if ($ignore) { last; } ### keep going until hit ask with ignore flag
+			if ($ignore) { last; } ### keep going until hit first ignored order
 			$ask_hi = &max($ask_hi, $price);
 			$ask_qty += $vol;
 			#$text .= "  ask ".&comma($price)." x $vol$eol";
@@ -1444,7 +1483,7 @@ sub output_route {
 		foreach my $bid (@{$Data{$r}{$i}{Bids}}) {
 			my ($price, $vol, $ignore, $when) = split(':', $bid);
 			if (! $bid_lo) { $bid_lo = $price; }
-			if ($ignore) { last; }
+			if ($ignore) { last; } ### keep going until hit first ignored order
 			$bid_lo = &min($bid_lo, $price);
 			$bid_qty += $vol;
 			#$text .= "  bid ".&comma($price)." x $vol$eol";
@@ -1483,13 +1522,14 @@ sub import_item_db {
 
 ### import cargo lists to Data[] (via Bids/Asks + kludge)
 sub import_from_server {
+	print &time2s()." import_from_server()\n";
+
 	### reset
 	%Bids = ();
 	%Asks = ();
 	my %kludge = ();
 
 	my $FH;
-	print &time2s()." import_from_server()\n";
 	if(not open($FH, '<:crlf', $cargo_filename)) {
 		print &time2s()." import_from_server(): no cargo file \"$cargo_filename\"\n";
 		return;
@@ -1752,7 +1792,7 @@ sub import_game_file {
 }
 
 sub export_my_data {
-	print &time2s()." export_my_data()\n";
+	#print &time2s()." export_my_data()\n";
 	my $FH;
 	open($FH, '>:crlf', $my_data_filename);
 	flock($FH, LOCK_EX);
@@ -1778,7 +1818,6 @@ sub export_my_data {
 		}
 	}
 	close $FH;
-	print &time2s()." export_my_data()\n";
 }
 
 
@@ -2433,7 +2472,7 @@ sub export_crest_reqs {
 	### export (only if new)
 	#if ($text ne $last_req) {
 	if (1) {
-		print &time2s()." export_crest_reqs($nreqs)\n";
+		if ($nreqs > 0) { print &time2s()." export_crest_reqs($nreqs)\n"; }
 		my $FH;
 		open ($FH, '>', $fname);
 		flock ($FH, LOCK_EX);
@@ -2447,18 +2486,18 @@ sub export_crest_reqs {
 ### refresh(): update loop, called every 1 sec
 my $last_update_server = 0;
 sub refresh_server_data {
-	print &time2s()." refresh_server_data()\n";
 	my ($force_refresh) = @_;
+	#print &time2s()." refresh_server_data()...";
 
 	### check if server data has changed
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
-	if (not $mtime) { print &time2s()." no cargo file\n"; }
+	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
 	if (($mtime and ($last_update_server < $mtime)) or $force_refresh) {
 
 		### import data from server
 		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
 		my $mod_ago = (defined $mtime) ? ((time - $mtime)."s ago") : ("never");
-		print &time2s()." dash.refresh_server_data(): last $update_ago, file mod $mod_ago\n";
+		print &time2s()." refresh_server_data(): last $update_ago, file mod $mod_ago\n";
 		$last_update_server = time;
 		&import_from_server();
 		&import_from_game();
@@ -2582,7 +2621,8 @@ sub import_from_game {
 			}
 		}
 	}
-	print &time2s()." import_marketlogs($nimports)\n";
+	
+	if ($nimports > 0) { print &time2s()." import_marketlogs($nimports)\n"; }
 	return $Redraw;
 }
 
@@ -2662,5 +2702,5 @@ print "MainLoop() exit\n";
 
 
 system("taskkill /F /T /IM php.exe");
-system("taskkill /F /T /IM perl.exe");
-#system("taskkill /PID $pid_skynet");
+system("taskkill /F /T /IM perl.exe"); # pwn
+#system("taskkill /PID $pid_skynet");  # fail

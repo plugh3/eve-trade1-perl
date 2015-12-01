@@ -150,9 +150,9 @@ class CurlWrapper
             }
             */
             
-            $ttl1 = $ret->getCacheTTL();
-            if (true || strpos($uri, "/regions/") === false)
-                echo time2s()."cw.get(cache)  TTL=".($ttl1)." $uri\n";
+            //$ttl1 = $ret->getCacheTTL();
+            //if (true || strpos($uri, "/regions/") === false)
+            //    echo time2s()."cw.get(cache)  TTL=".($ttl1)." $uri\n";
             return $ret;
         } catch (Exceptions\KeyNotFoundInCacheException $e) {
             $responseClass = Config::getIveeClassName('Response');

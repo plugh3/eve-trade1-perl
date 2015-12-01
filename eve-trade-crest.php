@@ -186,11 +186,16 @@ while (1)
                 //$n = count(explode("\n", $text))-1;
                 //echo time2s()."export $buy($n) $fname_short\n";
             },
-            function (\iveeCrest\Response $response) use ($rowByItem)
+            function (\iveeCrest\Response $r) use ($rowByItem)
             {
-                echo time2s().">>> php.multiGet ERROR...\n";
-                var_dump($response);
-                //exit;
+              echo time2s().">>> php.getMulti ERROR\n";
+              $t = "";
+              $t .= "URL=".$r->getInfo()['url'];
+              $t .= "\n";
+              $t .= "HTTP=".$r->getInfo()['http_code'];
+              $t .= "\n";
+              echo $t;
+              //var_dump($response);
             }
         ); // end getMultiMarketOrders() call
     }
@@ -212,7 +217,7 @@ while (1)
             $nexports++;
         }
     }
-    echo time2s()."php.export($nexports)\n";
+    if ($nexports > 0) { echo time2s()."php.export($nexports)\n"; }
     
     //echo time2s()."sleeping 60 secs...\n";
     sleep(1);

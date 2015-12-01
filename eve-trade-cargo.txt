@@ -1,0 +1,373 @@
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19282:ask:74999800.00:3:3:1448943268:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19282:ask:74999999.95:1:1:1448943268:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19282:ask:75000000.00:2:2:1448943268:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:19282:bid:79000222.46:2:2:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19282:bid:79000222.45:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19282:bid:79000222.40:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19282:bid:79000222.38:2:2:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20159:ask:256800101.02:1:1:1448943268:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:20159:bid:275300001.91:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30050:ask:55598958.82:2:2:1448946081:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30050:ask:55598958.84:22:22:1448946081:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.24:5:5:1448944865:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.23:1:1:1448944865:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.22:3:3:1448944865:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.21:3:3:1448944865:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.20:1:1:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.19:1:1:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.14:4:4:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.12:4:4:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401299.00:1:1:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30050:bid:56401112.00:9:9:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524989.94:17:17:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524989.95:104:104:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524989.96:113:113:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524989.97:20:20:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524990.00:9:9:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524990.97:353:353:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524990.98:3:3:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524990.98:2:2:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524990.99:37:37:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33076:ask:524991.01:121:121:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.70:199:199:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.69:63:63:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.66:40:40:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.65:24:24:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.56:70:70:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.48:192:192:1448853102:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:33076:bid:541054.06:100:100:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:42900000.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:42999999.99:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:43000000.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:43300000.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:43399999.99:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:43499999.99:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19266:ask:43700000.50:7:7:1448827789:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44440000.00:3:3:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44439999.99:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44429999.99:2:2:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44331003.06:2:2:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44331003.00:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44331002.17:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44331002.16:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19266:bid:44331002.10:2:2:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:15999129.20:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16000000.00:2:2:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16000000.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16500000.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16996666.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16996671.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16996672.00:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16996673.06:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16997030.47:2:2:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19219:ask:16998999.99:1:1:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:19219:bid:17299998.27:1:1:1448947607:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19219:bid:17299998.26:3:3:1448947607:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19219:bid:17299998.25:4:4:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19219:bid:17299988.18:3:3:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19219:bid:17299968.16:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14074:ask:10150005.26:4:4:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:14074:bid:11634128.24:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14074:bid:11633794.13:16:16:1448832586:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749996.94:1:1:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749996.95:2:2:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749996.97:1:1:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749997.00:4:4:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749998.00:3:3:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749999.96:4:4:1448943357:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749999.98:4:4:1448853102:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1749999.99:1:1:1448853102:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1799997.98:3:3:1448827789:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1799998.00:1:1:1448827789:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34274:ask:1800000.00:4:4:1448827789:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:34274:bid:1868781.00:7:7:1448943357:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34274:bid:1867842.00:6:6:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34274:bid:1867839.00:19:19:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:18875:ask:112999082.00:11:11:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:18875:bid:115202000.03:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:18875:bid:115023000.18:1:1:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34272:ask:2972296.97:2:2:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34272:ask:2972296.98:16:16:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34272:ask:2972296.98:9:9:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:34272:bid:3101123.01:3:3:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34272:bid:3101123.00:12:12:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34272:bid:3101122.01:3:3:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34272:bid:3101122.00:2:2:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34272:bid:3101119.00:2:2:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:12206:ask:2799997.83:6:6:1448943276:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:12206:bid:3400000.01:4:4:1448827789:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30112:ask:51488815.05:3:3:1448944399:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:30112:bid:52600264.40:3:3:1448943276:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14584:ask:3500000000.00:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14584:bid:4799999999.99:1:1:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:140321.80:225:225:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:141972.08:267:267:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:141972.09:422:422:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:141972.11:9:9:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:142354.00:202:202:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:143258.16:500:500:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:143258.17:71:71:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:144000.00:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:144634.12:1380:1380:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:20411:ask:145000.00:40:40:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20411:bid:151999.63:963:963:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20411:bid:151999.10:1402:1402:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20411:bid:151999.02:950:950:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830198.89:15:15:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830198.94:8:8:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.00:8:8:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.75:50:50:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.76:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.88:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.94:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830199.99:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830200.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830200.72:3:3:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830200.88:15:15:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830200.99:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1830201.00:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1839998.48:15:15:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1840000.00:2:2:1448858301:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1847998.95:4:4:1448858301:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1847999.00:2:2:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1847999.82:2:2:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1848000.00:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1849999.00:3:3:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4027:ask:1850000.00:18:18:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4027:bid:1900002.01:13:13:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4027:bid:1900002.00:14:14:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4027:bid:1900001.10:97:97:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4027:bid:1900001.10:25:25:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4027:bid:1900000.00:41:41:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:22552:ask:699999.99:20:20:1448853100:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:22552:ask:699999.99:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:22552:ask:700000.00:99:99:1448853100:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:800000.15:10:10:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:800000.14:7:7:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:800000.09:48:48:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:800000.07:5:5:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:800000.00:1:1:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22552:bid:710001.54:1:1:1448853100:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:14170:ask:99120999.98:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14170:ask:99120999.99:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14170:ask:99121000.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14170:bid:101540011.68:1:1:1448947482:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14170:bid:101540000.01:5:5:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:13972:ask:13999994.53:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:13972:ask:13999994.57:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:13972:ask:13999994.58:4:4:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:13972:ask:13999999.99:7:7:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:13972:ask:14000000.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:13972:bid:14500123.02:18:18:1448946846:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:16067:ask:74499000.00:3:3:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16067:ask:74500000.00:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16067:ask:75000000.00:4:4:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:16067:bid:76000000.08:15:15:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:30586:ask:2700000.00:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30586:ask:2999998.98:5:5:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30586:ask:2999998.99:2:2:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30586:ask:2999999.00:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30586:ask:3299999.00:2:2:1448945124:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30586:bid:3360117.79:30:30:1448945124:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:34575:ask:1800000.00:6:6:1448946912:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34575:ask:2000000.00:4:4:1448946912:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34575:bid:2350602.00:14:14:1448944181:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:18975:ask:91998999.98:1:1:1448944311:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:18975:ask:91999000.00:1:1:1448944311:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:18975:ask:91999999.92:1:1:1448856919:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:18975:bid:93690779.80:2:2:1448944311:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:18975:bid:93690779.79:1:1:1448944311:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:23990.44:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:23997.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:24999.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:24999.97:158:158:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:24999.98:100:100:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:25000.00:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:28029.44:6:6:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4477:ask:28029.45:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4477:bid:35006.19:1182:1182:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4699995.00:1:1:1448946342:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4699995.01:17:17:1448946342:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4699995.03:2:2:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4700000.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4792345.20:10:10:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:34208:ask:4805216.10:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34208:bid:4850080.00:272:272:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:24519:ask:1147.00:73764:73764:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:24519:bid:1300.01:7872:7872:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:24519:bid:1300.00:10000:10000:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:499999.99:22:22:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:500000.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553998.97:11:11:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553998.99:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.82:20:20:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.83:64:64:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.84:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.86:9:9:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:553999.89:16:16:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:4471:ask:554000.00:1:1:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4471:bid:565000.01:21:21:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4471:bid:565000.00:181:181:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:14138:ask:37998888.00:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14138:ask:37998899.85:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14138:ask:37999999.92:1:1:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:14138:ask:38000000.00:2:2:1448827774:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14138:bid:38730000.03:1:1:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14138:bid:38730000.02:2:2:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14138:bid:38730000.00:1:1:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14138:bid:38632000.19:1:1:1448827774:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:30600:ask:3000000.00:3:3:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:30600:ask:3500000.00:4:4:1448943262:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30600:bid:3620090.06:2:2:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30600:bid:3600090.04:30:30:1448943262:Amarr VIII (Oris) - Emperor Family Academy
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22110:ask:143709999.51:2:2:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22110:ask:143710000.20:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22110:ask:143720000.00:2:2:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:22110:ask:143720000.00:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:22110:bid:150000170.03:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:22110:bid:150000170.00:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:22110:bid:150000169.95:2:2:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:22110:bid:150000169.78:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:22110:bid:150000000.00:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:33362:ask:19117.76:61903:61903:1448943303:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:33362:bid:21720.06:34:34:1448943302:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:33362:bid:21720.00:4200:4200:1448943302:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14172:ask:32762000.06:2:2:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:14172:ask:32762000.07:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:14172:bid:35909098.58:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:14172:bid:35909098.57:2:2:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:13878:ask:51999998.98:1:1:1448947432:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:13878:ask:51999998.99:3:3:1448943303:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:13878:bid:55000006.00:1:1:1448943303:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:13878:bid:55000005.01:2:2:1448943303:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:2905:ask:579521.98:250:250:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:652002.15:10:10:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:652002.10:7:7:1448853108:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:610000.07:34:34:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:610000.06:101:101:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:610000.04:50:50:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:2905:bid:600001.08:20:20:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30040:ask:50635426.49:2:2:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30040:ask:50635426.50:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30040:ask:50635426.54:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30040:ask:50635426.55:5:5:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30040:bid:52000000.57:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30040:bid:52000000.26:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30040:bid:52000000.23:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30040:bid:52000000.07:2:2:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30040:bid:52000000.05:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4258:ask:900099.97:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4258:ask:900099.98:22:22:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4258:ask:900100.00:6:6:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:4258:ask:903999.98:38:38:1448858115:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:4258:bid:1021000.16:12:12:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:4258:bid:1019000.01:20:20:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:4258:bid:1019000.00:4:4:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:4258:bid:1003063.24:10:10:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20420:ask:102998.86:1030:1030:1448944765:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20420:ask:102998.88:37:37:1448944765:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:20420:ask:102998.95:6792:6792:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:20420:bid:105999.99:527:527:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:20420:bid:105001.00:817:817:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:20420:bid:104300.02:754:754:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:20420:bid:104201.94:79:79:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:20420:bid:104201.67:2381:2381:1448827781:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:30270:ask:60000.00:320:320:1448946370:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:30270:bid:75000.00:230:230:1448946370:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:15600:ask:798999.99:50:50:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:15600:bid:862018.23:87:87:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:18967:ask:77999997.99:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:18967:ask:77999998.00:2:2:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:18967:bid:80000000.01:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:18967:bid:80000000.00:1:1:1448943268:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:11648:ask:1400000.14:16:16:1448947063:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:11648:ask:1400000.15:2:2:1448947063:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:11648:bid:1531000.03:49:49:1448947113:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28238:ask:3333333.00:1:1:1448943268:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28238:ask:4500000.00:1:1:1448827781:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:28238:bid:5000000.00:151:151:1448827780:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:6283:ask:1283560000.00:1:1:1448827786:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:6283:bid:1522100000.00:1:1:1448827786:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:34414:ask:28500000.00:1:1:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:34414:ask:29999999.99:1:1:1448827786:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:34414:ask:30000000.00:1:1:1448827786:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34414:bid:31641005.72:18:18:1448946403:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:28411:ask:17000.00:491:491:1448947486:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28411:bid:26444.44:101802:101802:1448943272:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:28417:ask:8400.00:11656:11656:1448943490:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28417:bid:8800.74:474:474:1448943490:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28417:bid:8800.72:5385:5385:1448943490:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28417:bid:8800.71:117312:117312:1448943490:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5441:ask:28500.00:2:2:1448946071:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5441:ask:39999.99:231:231:1448946071:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5441:ask:40000.00:1:1:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5441:ask:44000.00:1:1:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:5441:bid:53101.33:27:27:1448943262:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:5441:bid:53101.32:1493:1493:1448943262:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:19139:ask:10000000.88:3:3:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:19139:bid:11000000.00:15:15:1448943272:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:34163:ask:200000000.00:1:1:1448827786:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:34163:bid:204201004.33:1:1:1448943272:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:154999.99:15:15:1448943267:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:155000.00:1:1:1448943267:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:160000.00:1:1:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:164999.98:25:25:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:165000.00:2:2:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:165999.00:6:6:1448855606:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:167959.26:82:82:1448855606:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5403:ask:169999.97:2:2:1448855606:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:5403:bid:185500.00:451:451:1448946778:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:12631:ask:31.99:53585:53585:1448945436:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:12631:ask:32.00:418748:418748:1448945436:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:12631:bid:37.28:22984:22984:1448945438:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:12631:bid:37.27:858023:858023:1448945438:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:28332:ask:800.00:30148:30148:1448943272:Jita IV - Moon 4 - Caldari Navy Assembly Plant
+Jita IV - Moon 4 - Caldari Navy Assembly Plant:28332:bid:880.21:473013:473013:1448943272:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19199:ask:189999999.92:1:1:1448947650:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19199:ask:189999999.97:1:1:1448943302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19199:ask:189999999.99:1:1:1448856980:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:19199:ask:190000000.00:1:1:1448856980:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:19199:bid:195000800.01:1:1:1448835066:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:19199:bid:195000800.00:1:1:1448835066:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:19199:bid:195000716.95:1:1:1448827781:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:19199:bid:195000716.77:1:1:1448827781:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:600111.30:2:2:1448943271:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:609997.97:41:41:1448943271:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:609997.98:1427:1427:1448943271:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:609999.00:9:9:1448943271:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:612999.99:11:11:1448856758:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:25609:ask:614000.00:17:17:1448853099:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:25609:bid:619935.15:713:713:1448943271:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:25609:bid:619507.00:1309:1309:1448853099:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:16391:ask:246999.98:46:46:1448944302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16391:ask:247000.00:20:20:1448944302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16391:ask:247043.99:14:14:1448944302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16391:ask:247044.00:52:52:1448944302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:16391:ask:247044.41:288:288:1448944302:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:259135.01:22:22:1448944302:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:259135.00:1:1:1448944302:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:259132.07:50:50:1448944302:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:259132.05:100:100:1448944302:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:259132.01:36:36:1448944302:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:258785.02:17:17:1448827780:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:16391:bid:255605.86:19:19:1448827780:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3599998.82:3:3:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3599998.93:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3599998.99:15:15:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3600000.00:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3649999.00:2:2:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3650000.00:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3700000.00:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3700999.98:7:7:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3701000.00:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:5302:ask:3702000.00:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:5302:bid:3800006.30:2:2:1448943267:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:5302:bid:3800006.17:25:25:1448943267:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:5302:bid:3800006.15:27:27:1448943267:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:35789:ask:340000.00:11:11:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:35789:ask:348999.99:46:46:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:35789:ask:369989.93:1:1:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Dodixie IX - Moon 20 - Federation Navy Assembly Plant:35789:ask:369989.96:3:3:1448943267:Amarr VIII (Oris) - Emperor Family Academy
+Amarr VIII (Oris) - Emperor Family Academy:35789:bid:390150.16:2:2:1448943267:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
+Amarr VIII (Oris) - Emperor Family Academy:35789:bid:390150.15:90:90:1448943267:Dodixie IX - Moon 20 - Federation Navy Assembly Plant
