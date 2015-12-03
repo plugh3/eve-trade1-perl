@@ -1,5 +1,6 @@
 <?php
 
+
 //initialize iveeCrest. Adapt path as required.
 require_once(__DIR__.'/iveeCrestInit.php');
 
@@ -83,6 +84,14 @@ $item_iname2fname = array(
 $old_access_token = '9uOF0I5F0CjDeRyu97bvOCj9PNFdkTDfhiV-LSiiu1ZTQClrtMF2hmyXn9V9WDWGBAPKKgI4_D4sgzCAJxnplA2'; // 5/1 2:58pm
 
 $sep = '~';
+
+
+function set_remove(array &$set, $id) {
+    for($i = 0; $i < count($set); $i++) {
+        if ($set[$i] == $id) { array_splice($set, $i); return; }
+    }
+}
+
 $last = 0;          // time of last import (of crest requests)
 $last2 = array();   // time of last export, by filename
 $last_empty = 0;
@@ -133,71 +142,64 @@ while (1)
     // get crest data => Orders[r][i][]
     // via aysnc multiget for each region
     $Orders = array();
+    // loop: region
     foreach ($rowsByRegion as $reg_id => $rows) {
-        if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); }
+      if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); }
 
-        // setup multiGet() call
-        $typeIds = array();
-        $rowByItem = array();
-        foreach ($rows as $row) 
-        {
-            list($reg_id2, $reg_name, $item_id, $item_name, $is_bid) = explode($sep, $row);
-            // TODO: check reg_ids match
-            $typeIds[] = $item_id;
-            $rowByItem[$item_id] = $row;
-        }
+      // setup args for multiGet()
+      $typeIds = array(); // multiget arg AND while loop condition
+      $rowByItem = array();
+      // loop: item
+      foreach ($rows as $row) 
+      {
+          list($reg_id2, $reg_name, $item_id, $item_name, $is_bid) = explode($sep, $row);
+          // TODO: check reg_ids match
+          $typeIds[] = $item_id;
+          $rowByItem[$item_id] = $row;          
+      }
 
+      // loop until GET queue is empty (some fail b/c rate limits or ???)
+      $pass = 0;
+      while (! empty($typeIds)) {
+        $pass++;
+        if ($pass > 1) {echo "\x07";}
+        
         // populate Orders[reg][item][]
-        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id\n";
+        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id, Pass $pass\n";
         $handler->getMultiMarketOrders(
             $typeIds, 
             $reg_id2, 
-            function(\iveeCrest\Response $response) use ($rowByItem, &$Orders) {
-                $orders = $response->content->items;                
-                $url = $response->getInfo()['url'];
-                $buy = (url2buy($url)) ? 'BUY' : 'SELL';
-                $item_id = url2item($url);
-                $row = $rowByItem[$item_id];
-                $fname2 = getExportFilename($row);
+            function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, $reg_id, &$typeIds) {
 
+                // item ID: parse from URL
+                $url = $response->getInfo()['url'];
+                $item_id = url2item($url);
+                set_remove($typeIds, $item_id); // remove item_id from GET queue
+
+                // region ID: lookup in dictionary of file rows (eve-trade-crest-reqs.txt)
+                $row = $rowByItem[$item_id];
                 $sep = '~'; // TODO: use global instead
                 list($reg_id, $reg_name, $item_id2, $item_name, $is_bid) = explode($sep, $row);
 
-                global $export_prefix;
-                $fname_short = substr($fname2, strpos($fname2, $export_prefix) + strlen($export_prefix));
-
-
+                // orders: main body of http response
                 // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
                 // so we need to merge responses into 1 array
+                $orders = $response->content->items;                
                 if (isset($Orders[$reg_id][$item_id])) {
-                    //echo time2s()."handler_A $buy $fname_short\n";
                     $Orders[$reg_id][$item_id]->orders = array_merge($Orders[$reg_id][$item_id]->orders, $orders);
                 } else {
-                    //echo time2s()."handler_B $buy $fname_short\n";
                     $Orders[$reg_id][$item_id] = new \stdClass();
                     $Orders[$reg_id][$item_id]->row = $row;
                     $Orders[$reg_id][$item_id]->orders = $orders;
                 }
-                        
-
-                //$text = formatHeader().formatOrders($orders, $reg_id);
-                //$fname2 = getExportFilename($row);
-                //export($fname2, $text);
-                //$n = count(explode("\n", $text))-1;
-                //echo time2s()."export $buy($n) $fname_short\n";
             },
-            function (\iveeCrest\Response $r) use ($rowByItem)
-            {
-              echo time2s().">>> php.getMulti ERROR\n";
-              $t = "";
-              $t .= "URL=".$r->getInfo()['url'];
-              $t .= "\n";
-              $t .= "HTTP=".$r->getInfo()['http_code'];
-              $t .= "\n";
-              echo $t;
-              //var_dump($response);
+            function (\iveeCrest\Response $r) use ($rowByItem) {
+              echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
+              //echo "\x07"; # beep
+              if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             }
         ); // end getMultiMarketOrders() call
+      }
     }
     
     // export to Marketlogs files

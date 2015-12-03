@@ -16,16 +16,32 @@ use Tk::Font;
 use Tk::ProgressBar;
 use Clipboard;
 use Fcntl qw(:DEFAULT :flock);
+use DBI;
 
 
 
 
 ### start mysql
-my $procs = `tasklist`;
-if (not ($procs =~ m/mysqld/)) {
+if (not (`tasklist` =~ m/mysqld/)) {
+	print &time2s()." starting mysql...";
 	system("start C:\\xampp\\xampp-control.exe"); ## new window
-	print "Waiting for MySQL to start...";
-	while (not (`tasklist` =~ m/mysqld/)) { sleep 1; }
+
+	### wait for mysqld to wake up
+	my $db_name = "evesdd";
+	my $db_host = "127.0.0.1";
+	my $db_port = "3306";	
+	my $db_info = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
+	my $db_user = "dev";
+	my $db_pass = "BNxJYjXbYXQHAvFM";
+	my $dbh;
+	eval {$dbh = DBI->connect($db_info, $db_user, $db_pass, {'RaiseError' => 1})};
+	while ($@) {
+		print ".";
+		sleep 1;
+		eval {$dbh = DBI->connect($db_info, $db_user, $db_pass, {'RaiseError' => 1})};
+	}
+	$dbh->disconnect();
+
 	print "done.\n";
 }
 
@@ -34,7 +50,8 @@ my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
-	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	system("start run-crest.bat"); ## new window, persist after die
 	exit;
 }
 $pid_crest = substr($pid_crest, 1);

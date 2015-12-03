@@ -116,7 +116,7 @@ class CurlWrapper
                 CURLOPT_HTTPHEADER      => $header,
                 CURLOPT_HEADERFUNCTION  => array($response, 'handleCurlHeaderLine')
             );
-            echo time2s()."cw.post(fetch) $uri\n";
+            echo time2s()."cw.post ".str_replace(Config::getCrestBaseUrl(), "", $uri)."\n";
             if (strpos($uri, 'oauth/token') !== false) { 
                 //var_dump($header);
                 //var_dump($fields);
@@ -164,7 +164,7 @@ class CurlWrapper
                 CURLOPT_HTTPHEADER      => $header,
                 CURLOPT_HEADERFUNCTION  => array($response, 'handleCurlHeaderLine')
             );
-            echo time2s()."cw.get(fetch)  $uri\n";
+            echo time2s()."cw.get "."/".substr($uri, strlen(Config::getCrestBaseUrl()))."\n";
             $this->doRequest($curlOptions, $response);
             return $response;
         }
@@ -288,7 +288,7 @@ class CurlWrapper
             $href = $hrefsToQuery[$i];
             //echo time2s()."curl.multi  $href\n";
             $responses[$href] = $this->addHandleToMulti($master, $href, $stdOptions, $getAuthHeader, $header);
-}
+        }
 
         $running = false;
         do {
@@ -324,7 +324,7 @@ class CurlWrapper
                         $this->cache->setItem($res);
                     $callback($res);
                 } elseif (isset($errCallback)) {
-                    //echo ">>> curl_multi error, http code ".$info['http_code']."\n";
+                    echo time2s()."cw.asyncMultiGet(): curl_multi error, http code ".$info['http_code']."\n";
                     $errCallback($res);
                 }
                 //remove the reference to response to conserve memory on large batches

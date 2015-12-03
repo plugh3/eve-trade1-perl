@@ -263,6 +263,8 @@ class Client
                 );
                 
                 $get = $this->cw->get($url, $header);
+            } else {
+                echo time2s()."cl.getEndpointResponse() unknown error\n"; var_dump($e);
             }
         }
         
