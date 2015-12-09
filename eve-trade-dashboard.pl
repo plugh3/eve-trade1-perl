@@ -3,9 +3,14 @@
 use 5.010;
 use strict;
 use warnings;
-use LWP::Simple;
+
+use Clipboard;
+use DBI;
+use Fcntl qw(:DEFAULT :flock);
 use List::Util qw (shuffle);
+use LWP::Simple;
 use Time::HiRes qw (gettimeofday);
+use Time::Local;
 use Tk;
 use Tk::HList;
 use Tk::Tree;
@@ -14,14 +19,11 @@ use Tk::Pretty;
 use Tk::Adjuster;
 use Tk::Font;
 use Tk::ProgressBar;
-use Clipboard;
-use Fcntl qw(:DEFAULT :flock);
-use DBI;
 
 
 
 
-### start mysql
+### start local mysqld
 if (not (`tasklist` =~ m/mysqld/)) {
 	print &time2s()." starting mysql...";
 	system("start C:\\xampp\\xampp-control.exe"); ## new window
@@ -50,8 +52,8 @@ my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
-	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
-	system("start run-crest.bat"); ## new window, persist after die
+	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
 	exit;
 }
 $pid_crest = substr($pid_crest, 1);
@@ -232,7 +234,7 @@ sub copy2clip_iterate {
 			my ($r2, $id2) = split($Sep, $p_cycle);
 			### copy to clipboard
 			Clipboard->copy($items_name{$id2});
-			$mw->bell;
+			$mw->bell; # beep
 			redraw();
 			last;
 		}
@@ -1428,7 +1430,7 @@ sub output_route {
 		#$text.= $items_name{$i}.$eol;
 		push(@list, $items_name{$i});
 	}	
-	### alphabetized
+	### alphabetize
 	foreach (sort {
 			my $a2 = $a;
 			my $b2 = $b;
@@ -1463,6 +1465,7 @@ sub output_route {
 	### OUTPUT: timestamp (ex "19:10")
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	$text.= sprintf("%02i:%02i", ($hour+8)%24, $min);
+	$text.= "  ".&checksum_out($Totals{$r}{Checksum}, 3);
 	$text.= $eol;
 
 
@@ -1512,7 +1515,6 @@ sub output_route {
 }
 
 
-use DBI;
 sub import_item_db {
 	print &time2s()." import_item_db()\n";
 	my $username = "dev";
@@ -1537,7 +1539,7 @@ sub import_item_db {
 }
 
 
-### import cargo lists to Data[] (via Bids/Asks + kludge)
+### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
 sub import_from_server {
 	print &time2s()." import_from_server()\n";
 
@@ -1569,9 +1571,9 @@ sub import_from_server {
 		$latest = &max($latest, $when);
 
 		### initialize hashes
-		if (! $Bids{$where})    {$Bids{$where} = ();}
-		if (! $Asks{$where})    {$Asks{$where} = ();}
-		if (! $kludge{$where}) {$kludge{$where} = ();}
+		if (! $Bids{$where})    {$Bids{$where}   = ();}
+		if (! $Asks{$where})    {$Asks{$where}   = ();}
+		if (! $kludge{$where})  {$kludge{$where} = ();}
 
 		my $t = "";
 		$t .= $items_name{$id}." ";
@@ -1615,13 +1617,10 @@ sub import_from_server {
 				$Data{$r}{$id}{Asks_Reliable} = 0;
 				$Data{$r}{$id}{Asks_Age} = 0;
 			}
-						
-			### TODO: is this logic right?
-			### skip if we have recent reliable data
-			if ( (!$Data{$r}{$id}{Bids_Reliable} && $when > $Data{$r}{$id}{Bids_Age}) ||
-			     ( $Data{$r}{$id}{Bids_Reliable} && $when > $Data{$r}{$id}{Bids_Age} + $game_data_expire)
-			   )
-			{
+
+			### import orders from evecentral, unless we already have order data 
+			if (! $Data{$r}{$id}{Bids}) {
+				#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
 				$Data{$r}{$id}{Bids} = ();
 				$Data{$r}{$id}{Bids_Reliable} = 0;
 				foreach my $bid (@{$Bids{$bid_loc}{$id}}) {
@@ -1631,11 +1630,9 @@ sub import_from_server {
 			} else { 
 				#print ">>> ignoring server bids for $items_name{$id} \[$r\]\n"; 
 			}
-			### skip if we have recent reliable data
-			if ( (!$Data{$r}{$id}{Asks_Reliable} && $when > $Data{$r}{$id}{Asks_Age}) ||
-			     ( $Data{$r}{$id}{Asks_Reliable} && $when > $Data{$r}{$id}{Asks_Age} + $game_data_expire)
-			   )
-			{
+			### import orders from evecentral, unless we already have order data 
+			if (! $Data{$r}{$id}{Asks}) {
+				#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
 				$Data{$r}{$id}{Asks} = ();
 				$Data{$r}{$id}{Asks_Reliable} = 0;
 				foreach my $ask (@{$Asks{$ask_loc}{$id}}) {
@@ -1670,6 +1667,7 @@ my %empty_game_files = ();
 my %item_fname2iname = (
 	'GDN-9 Nightstalker Combat Goggles' 		=> 'GDN-9 "Nightstalker" Combat Goggles',
 	'Odin Synthetic Eye (left_gray)' 		=> 'Odin Synthetic Eye (left/gray)',
+	'Men\'s \'Hephaestus\' Shoes (white_red)' 		=> 'Men\'s \'Hephaestus\' Shoes (white/red)',
 	'SPZ-3 Torch Laser Sight Combat Ocular Enhancer (right_black)' => 'SPZ-3 "Torch" Laser Sight Combat Ocular Enhancer (right/black)',
 	'Public Portrait_ How To' 			=> 'Public Portrait: How To',
 	'Men\'s \'Ascend\' Boots (brown_gold)' 		=> 'Men\'s \'Ascend\' Boots (brown/gold)',
@@ -1696,116 +1694,26 @@ my %item_fname2iname = (
 	'Alliance Tournament X_ HUN Reloaded' 		=> 'Alliance Tournament X: HUN Reloaded',
 	'Alliance Tournament X_ Verge of Collapse' 	=> 'Alliance Tournament X: Verge of Collapse',
 );
-sub import_game_file {
-	my ($fname, $modtime) = @_;
-	#print "import_game_file() $fname\n";
-
-	my $FH;
-	open($FH, '<:crlf', $fname);
-
-	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
-	my $reg = $+{region};
-	my $item = $+{item};
-	if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
-	my $id = $items_id{$item};
-	#print &time2s()." import() ".sprintf("%-13s", "[".$reg."]")." $item\n";
-
-	my @bids = ();
-	my @asks = ();
-	my $order_loc = 0;
-	my $n_orders = 0;
-	<$FH>; ### header line
-	while (<$FH>) {
-		my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $solarSystemID, $jumps, undef) = split(',');
-		my $bidask = ($isBid eq 'True') ? 'bid' : 'ask';
-		my $price = $price2;
-		my $vol = $volRemaining;
-		my $ignore = 0;
-
-		### skip if minimum volume (scam)
-		if ($minVolume > 1) { next; }
-
-		### skip if non-hub station
-		my $where_id = $stn2sys{$stationID};
-		if (! $where_id) { next; }
-
-		my $where = &loc_i2n($where_id);
-		if (! $order_loc) { $order_loc = $where; }
-		if ($order_loc ne $where) { warn "import_game_file(): station mismatch $where vs. $order_loc"; }
-
-		#print "game data: $items_name{$id} $bidask $vol x $price \[$sys_names{$sys}\]\n";
-		#print "game data: ".sprintf("%11s", "\[".&where2s($where)."\]")." $id $bidask $vol x ".sprintf("%.2f", $price)."\n";
-
-		my $tuple = join(':', ($price, $vol, $ignore, $modtime));
-		if ($bidask eq 'bid') {
-			push(@bids, $tuple); $n_orders++;
-		} else {
-			push(@asks, $tuple); $n_orders++;
-		}
-	}
-	if ($n_orders == 0) { 
-		### this is not a fail state
-		### the fact that there are zero bids/asks is valid data
-		print &time2m()." import_game_file(): zero orders imported ".sprintf("%12s", "[".$reg."]")." $item\n";
-	}
-
-	my @asks2 = sort {
-		my ($price_a) = split(':', $a);
-		my ($price_b) = split(':', $b);
-		$price_a <=> $price_b;
-	} @asks;
-	my @bids2 = sort {
-		my ($price_a) = split(':', $a);
-		my ($price_b) = split(':', $b);
-		$price_b <=> $price_a;
-	} @bids;
-
-	my $n_asks = 0;
-	my $n_bids = 0;
-	foreach my $r (@Routes) {
-		my ($ask_loc, $bid_loc) = &route2locs($r);
-		foreach my $i2 (keys %{$Data{$r}}) {
-			if ($i2 != $id) { next; } 
-			### same item
-			
-
-			#print ">>> locs:\n  $ask_loc  X\n  $bid_loc  X\n  $order_loc\n";
-			if ($order_loc eq $ask_loc || $loc2reg{$ask_loc} eq $reg) {
-
-				### skip if out-of-date
-				if ($modtime + $game_data_expire < $Data{$r}{$id}{Asks_Age}) { next; }
-
-				$Data{$r}{$id}{Asks} = ();
-				foreach my $ask (@asks2) { 
-					if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
-					push(@{$Data{$r}{$id}{Asks}}, $ask); 
-					$n_asks++; 
-				}
-				$Data{$r}{$id}{Asks_Age} = $modtime;
-				$Data{$r}{$id}{Asks_Reliable} = 1;
-				$Redraw = 1;
-			} elsif ($order_loc eq $bid_loc  || $loc2reg{$bid_loc} eq $reg) {
-
-				### skip if out-of-date
-				if ($modtime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
-
-				$Data{$r}{$id}{Bids} = ();
-				foreach my $bid (@bids2) { 
-					if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
-					push(@{$Data{$r}{$id}{Bids}}, $bid); 
-					$n_bids++;
-				}
-				$Data{$r}{$id}{Bids_Age} = $modtime;
-				$Data{$r}{$id}{Bids_Reliable} = 1;
-				$Redraw = 1;
-			} else { 
-				next; 
-			}
-		}
-	}
-
-	close $FH;
-	#print "game data: $items_name{$id} ".sprintf("%11s", "\[$reg\]")." - $n_asks asks, $n_bids bids\n";
+### time format for Marketlog filename: "Region-Item-2015.12.06 033516"
+sub fname2time {
+	my ($fname) = @_;
+	### NOTE: $+{region} may or may not include directory path (bc we don't know if full filename was provided)
+	$fname =~ /(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
+	my ($yr, $mo, $dy, $hh, $mm, $ss) = ($+{yr}, $+{mo}, $+{dy}, $+{hh}, $+{mm}, $+{ss}); 
+	my $fnameTime = timegm($ss, $mm, $hh, $dy, $mo-1, $yr-1900, 0);
+	return $fnameTime;
+}
+### time format for Marketlog row: "2015-12-03 20:44:26.000"
+sub issuedate2time {
+	my ($issueDate) = @_;
+	my ($yr,$mo,$dy,$hh,$mm,$ss,$ms) = split(/[\s.:-]+/, $issueDate);
+	my $issueTime = timegm($ss, $mm, $hh, $dy, $mo-1, $yr-1900, 0);
+	return $issueTime;
+}
+sub line2time {
+	my ($row) = @_;
+	my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $solarSystemID, $jumps, undef) = split(',', $row);
+	return issuedate2time($issueDate);
 }
 
 sub export_my_data {
@@ -1886,6 +1794,29 @@ sub import_my_data {
 	}
 }
 
+use Digest::MD5 qw(md5_hex);
+sub checksum_new {
+	return Digest::MD5->new;
+}
+sub checksum_add {
+	my ($hh, $str) = @_;
+	$hh->add($str);
+}
+sub checksum_out {
+	my ($hh, $digitsHex) = @_;
+	$digitsHex = 4 if not defined $digitsHex;
+	my $hexMod = 0x10 ** $digitsHex;
+
+	my $hh2 = $hh->clone;			### clone handle
+	my $hexStr = $hh2->hexdigest;		### 128 bit hex string (destroys handle)
+	my $hexStrShort = substr($hexStr, -8); 	### truncate to 32 bit hex string
+	my $hexNum = hex($hexStrShort); 	### convert to numeric
+	my $hexTiny = $hexNum % $hexMod;	### truncate to X hex digits
+	my $fmt = "0x%0".$digitsHex."x";
+	my $out = sprintf($fmt, $hexTiny);  	### convert to string
+	return $out;
+}
+
 
 ### recalc(): calculate subtotals by item + route
 ### IN: Data[]
@@ -1901,12 +1832,15 @@ sub recalc {
 		$Totals{$r}{Cost} = 0;
 		$Totals{$r}{Size} = 0;
 		$Totals{$r}{Age} = 0;
+		$Totals{$r}{Checksum} = &checksum_new;
 	}
 
 	$GrandTotal = 0;
 	$N_items = 0;
 	$N_orders = 0;
+	### each route (pair: from -> to)
 	foreach my $r (keys %Data) {
+		### each item
 		foreach my $id (keys %{$Data{$r}}) {
 			$N_items++;
 			if (! $Data{$r}{$id}{Bids} || ! $Data{$r}{$id}{Asks} ) {
@@ -1920,7 +1854,9 @@ sub recalc {
 			$Data{$r}{$id}{Qty} = 0;			
 			$Data{$r}{$id}{Size} = 0;
 			$Data{$r}{$id}{ROI} = 0; 
-			$Data{$r}{$id}{ProfitPerSize} = 0; 
+			$Data{$r}{$id}{ProfitPerSize} = 0;
+			$Data{$r}{$id}{Age} = 0;
+			$Data{$r}{$id}{Checksum} = &checksum_new; 
 
 			if (!$Data{$r}{$id}{Asks_Reliable}) { $Data{$r}{$id}{Asks_Age} = 0; }
 			if (!$Data{$r}{$id}{Bids_Reliable}) { $Data{$r}{$id}{Bids_Age} = 0; }
@@ -1937,13 +1873,18 @@ sub recalc {
 			my $last_bid_rem = 0;
 			my $last_ask_rem = 0;
 			my $Eject = 0;
+			
 			 
-			### find profitable matches
+			### find profitable order matches
 			while (($i_bid < $n_bids) && ($i_ask < $n_asks)) {
 				my $bid = $Data{$r}{$id}{Bids}[$i_bid];
 				my $ask = $Data{$r}{$id}{Asks}[$i_ask];
 				my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
 				my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
+
+				### "age" = time of most profitable order (i==0)
+				if ($i_ask == 0) { $Data{$r}{$id}{Asks_Age} = $ask_when; }
+				if ($i_bid == 0) { $Data{$r}{$id}{Bids_Age} = $bid_when; }
 		
 				### order-level: check profit per size
 				### this also flags unprofitables
@@ -1972,8 +1913,13 @@ sub recalc {
 				$Data{$r}{$id}{Qty} += $qty;
 				$Data{$r}{$id}{Size} += $qty * $items_size{$id};
 				$Data{$r}{$id}{ROI} = $Data{$r}{$id}{Profit}/$Data{$r}{$id}{Cost};
-				$Data{$r}{$id}{Asks_Age} = &max($Data{$r}{$id}{Asks_Age}, $ask_when);
-				$Data{$r}{$id}{Bids_Age} = &max($Data{$r}{$id}{Bids_Age}, $bid_when);
+				#$Data{$r}{$id}{Asks_Age} = &max($Data{$r}{$id}{Asks_Age}, $ask_when);
+				#$Data{$r}{$id}{Bids_Age} = &max($Data{$r}{$id}{Bids_Age}, $bid_when);
+				
+				### hash string format
+				my $tradeStr = "$r, $id, $qty, $ask_price, $bid_price";
+				&checksum_add($Data{$r}{$id}{Checksum}, $tradeStr);
+				&checksum_add($Totals{$r}{Checksum}, $tradeStr);
 			}
 			### loop exits on (a) first unprofitable match or (b) ran out of bids or asks
 			### if last order was partially consumed, skip to next
@@ -2049,15 +1995,17 @@ sub recalc {
 
 			### aggregate data 
 			$Data{$r}{$id}{ProfitPerSize} = $Data{$r}{$id}{Profit} / $Data{$r}{$id}{Size};
+			$Data{$r}{$id}{Age} = &max($Data{$r}{$id}{Asks_Age}, $Data{$r}{$id}{Bids_Age});
 			if (! $Data{$r}{$id}{Ignore}) {
 				$Totals{$r}{Profit} += $Data{$r}{$id}{Profit};
 				$Totals{$r}{Cost} += $Data{$r}{$id}{Cost};
 				$Totals{$r}{Size} += $Data{$r}{$id}{Size};
-				$Totals{$r}{Age} = &max($Totals{$r}{Age}, &max($Data{$r}{$id}{Asks_Age}, $Data{$r}{$id}{Asks_Age}));
+				$Totals{$r}{Age} = &max($Totals{$r}{Age}, $Data{$r}{$id}{Age});
 			}
 
 			### check for for high-value opportunities
-			&notify_check($r, $id);		
+			&notify_check($r, $id);
+		
 		} # end item loop
 
 		$GrandTotal += $Totals{$r}{Profit};
@@ -2161,6 +2109,7 @@ sub repop {
 	### reset tree
 	$w1->delete('all');
 	
+	### each Route
 	foreach my $r (@Routes) {
 
 		### UI line: Route
@@ -2171,7 +2120,7 @@ sub repop {
 		$w1->itemCreate($p_route, $col_profit, -text => $Pre.&iski2s($Totals{$r}{Profit}).$Post, @opts_top_r); 
 		$w1->itemCreate($p_route, $col_cost, -text => $Pre.'-'.&iski2s($Totals{$r}{Cost}).$Post, @opts_top_r); 
 		$w1->itemCreate($p_route, $col_age, -text => $Pre.($Totals{$r}{Age} ? &age2s($Totals{$r}{Age}) : "---").$Post, @opts_top_r); 
-		#$w1->itemCreate($p_route, $col_size, -text => $Pre.&commai(int($Totals{$r}{Size}))." m3".$Post, @opts_top_r); 
+		$w1->itemCreate($p_route, $col_size, -text => $Pre.&commai(int($Totals{$r}{Size}))." m3".$Post, @opts_top_r); 
 
 		### Scenario 0: grey out zero profit
 		if ($Totals{$r}{Profit} == 0) {
@@ -2200,7 +2149,7 @@ sub repop {
 		}
 
 
-		### (item loop)
+		### each Item
 		my @items_sorted = &repop_sort($r);
 		my $n_items = (0+@items_sorted);
 		foreach my $i (@items_sorted) {
@@ -2224,7 +2173,7 @@ sub repop {
 			$w1->itemCreate($p_item, $col_cost, -text => '-'.&iski2s($Data{$r}{$i}{Cost}).$Post, @o_r); 
 			$w1->itemCreate($p_item, $col_qty, -text => &commai($Data{$r}{$i}{Qty})." x".$Post, @o_r); 
 			$w1->itemCreate($p_item, $col_size, -text => &commai(int($Data{$r}{$i}{Size}))." m3".$Post, @o_r); 
-			$w1->itemCreate($p_item, $col_age, -text => &age2s(&min($Data{$r}{$i}{Asks_Age}, $Data{$r}{$i}{Bids_Age})).$Post, @o_r); 
+			$w1->itemCreate($p_item, $col_age, -text => &age2s($Data{$r}{$i}{Age}).$Post, @o_r); 
 			$w1->itemCreate($p_item, $col_roi, -text => sprintf("%.1f", $Data{$r}{$i}{ROI}*100.0)."\%".$Post, @o_r); 
 			$w1->itemCreate($p_item, $col_pps, -text => sprintf("%.1f", $Data{$r}{$i}{ProfitPerSize}/1000.0)."K".$Post, @o_r); 
 			$w1->hide('entry', $p_item);
@@ -2283,7 +2232,11 @@ sub repop {
 				$w1->hide('entry', $p);
 			}
 		} ### end item
-		$w1->itemConfigure($r, $col_route, -text => $Pre.$r."\t($n_items)".$Post);
+		
+		### route row label (actual)
+		### "Jitas -> Amarr   (4)  0xcdef"		
+		my $id = &checksum_out($Totals{$r}{Checksum}, 3);
+		$w1->itemConfigure($r, $col_route, -text => $Pre.$r."\t($n_items)   $id".$Post);
 		
 		### total line
 		my $p = $r.$Sep."TOTAL";
@@ -2445,7 +2398,7 @@ my %reg_i2n = (
 my $last_req = '';
 sub export_crest_reqs {
 	my $fname = 'eve-trade-crest-reqs.txt';
-	my $age_old = 15;
+	my $age_old = 15 + 300; ### crest files are backdated by 5 mins
 	
 	### TODO: separate data by source
 	### 1. game export (trumps for 5m)
@@ -2500,42 +2453,123 @@ sub export_crest_reqs {
 	#else { print &time2s()." export_crest_reqs(): dup\n"; }
 }
 
-### refresh(): update loop, called every 1 sec
-my $last_update_server = 0;
-sub refresh_server_data {
-	my ($force_refresh) = @_;
-	#print &time2s()." refresh_server_data()...";
+sub import_game_file {
+	my ($fname, $modtime) = @_;
+	#print "import_game_file() $fname\n";
 
-	### check if server data has changed
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
-	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
-	if (($mtime and ($last_update_server < $mtime)) or $force_refresh) {
+	my $FH;
+	open($FH, '<:crlf', $fname);
 
-		### import data from server
-		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
-		my $mod_ago = (defined $mtime) ? ((time - $mtime)."s ago") : ("never");
-		print &time2s()." refresh_server_data(): last $update_ago, file mod $mod_ago\n";
-		$last_update_server = time;
-		&import_from_server();
-		&import_from_game();
+	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
+	my $reg = $+{region};
+	my $item = $+{item};
+	if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
+	my $id = $items_id{$item};
+	$modtime = &fname2time($fname); ### override system modtime with evetime
+	#print &time2s()." import() ".sprintf("%-13s", "[".$reg."]")." $item\n";
 
-		### draw from data
-		&export_my_data();
-		&redraw();
+	my @bids = ();
+	my @asks = ();
+	my $order_loc = 0;
+	my $n_orders = 0;
+	<$FH>; ### header line
+	while (<$FH>) {
+		my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $solarSystemID, $jumps, undef) = split(',');
+		my $bidask = ($isBid eq 'True') ? 'bid' : 'ask';
+		my $price = $price2;
+		my $vol = $volRemaining;
+		my $when = &issuedate2time($issueDate);
+		my $ignore = 0;
+
+		### skip if minimum volume (scam)
+		if ($minVolume > 1) { next; }
+
+		### skip if non-hub station
+		my $where_id = $stn2sys{$stationID};
+		if (! $where_id) { next; }
+
+		my $where = &loc_i2n($where_id);
+		if (! $order_loc) { $order_loc = $where; }
+		if ($order_loc ne $where) { warn "import_game_file(): station mismatch $where vs. $order_loc"; }
+
+		#print "game data: $items_name{$id} $bidask $vol x $price \[$sys_names{$sys}\]\n";
+		#print "game data: ".sprintf("%11s", "\[".&where2s($where)."\]")." $id $bidask $vol x ".sprintf("%.2f", $price)."\n";
+
+		my $tuple = join(':', ($price, $vol, $ignore, $when));
+		if ($bidask eq 'bid') {
+			push(@bids, $tuple); $n_orders++;
+		} else {
+			push(@asks, $tuple); $n_orders++;
+		}
 	}
+	if ($n_orders == 0) { 
+		### this is not a fail state
+		### the fact that there are zero bids/asks is valid data
+		print &time2m()." import_game_file(): zero orders imported ".sprintf("%12s", "[".$reg."]")." $item\n";
+	}
+
+	my @asks2 = sort {
+		my ($price_a) = split(':', $a);
+		my ($price_b) = split(':', $b);
+		$price_a <=> $price_b;
+	} @asks;
+	my @bids2 = sort {
+		my ($price_a) = split(':', $a);
+		my ($price_b) = split(':', $b);
+		$price_b <=> $price_a;
+	} @bids;
+
+	my $n_asks = 0;
+	my $n_bids = 0;
+	foreach my $r (@Routes) {
+		my ($ask_loc, $bid_loc) = &route2locs($r);
+		foreach my $i2 (keys %{$Data{$r}}) {
+			if ($i2 != $id) { next; } 
+			### same item
+			
+
+			#print ">>> locs:\n  $ask_loc  X\n  $bid_loc  X\n  $order_loc\n";
+			if ($order_loc eq $ask_loc || $loc2reg{$ask_loc} eq $reg) {
+
+				### skip if out-of-date
+				#if ($modtime + $game_data_expire < $Data{$r}{$id}{Asks_Age}) { next; }
+				if ($modtime < $Data{$r}{$id}{Asks_Age}) { next; }
+
+				$Data{$r}{$id}{Asks} = ();
+				foreach my $ask (@asks2) { 
+					if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
+					push(@{$Data{$r}{$id}{Asks}}, $ask); 
+					$n_asks++; 
+				}
+				$Data{$r}{$id}{Asks_Age} = $modtime;
+				$Data{$r}{$id}{Asks_Reliable} = 1;
+				$Redraw = 1;
+			} elsif ($order_loc eq $bid_loc  || $loc2reg{$bid_loc} eq $reg) {
+
+				### skip if out-of-date
+				#if ($modtime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
+				if ($modtime < $Data{$r}{$id}{Bids_Age}) { next; }
+
+				$Data{$r}{$id}{Bids} = ();
+				foreach my $bid (@bids2) { 
+					if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
+					push(@{$Data{$r}{$id}{Bids}}, $bid); 
+					$n_bids++;
+				}
+				$Data{$r}{$id}{Bids_Age} = $modtime;
+				$Data{$r}{$id}{Bids_Reliable} = 1;
+				$Redraw = 1;
+			} else { 
+				next; 
+			}
+		}
+	}
+
+	close $FH;
+	#print "game data: $items_name{$id} ".sprintf("%11s", "\[$reg\]")." - $n_asks asks, $n_bids bids\n";
 }
 
-
-
-### check if relevant game export files have been updated recently
-sub refresh_game_data {
-	my $newdata = &import_from_game();
-	if ($newdata) { 
-		&export_my_data();
-		&redraw();
-	}
-}
-
+my %lastImports = ();
 sub import_from_game {
 	#print "refresh_game_data()\n";
 
@@ -2564,17 +2598,19 @@ sub import_from_game {
 			}
 			my $id = $items_id{$item};
 			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$modtime,$ctime,$blksize,$blocks) = stat($fname_full);
-
-			### purge game export files after 72 hours
+			
+			### purge game export files > 72 hours old
 			if (time - $modtime > $age_expire_export) {
 				unlink $fname_full;
 				next;
 			}
 
-			### add file to index
+			### set up age index
 			my $key = "$reg.$id";
+			$modtime = &fname2time($fname); ### override system time with evetime
 			my $f1 = join($Sep, $fname_full, $modtime);
-			### check for dups, keep most recent, delete older
+			
+			### check for dups, delete older
 			if (! $Exports{$key}) {
 				$Exports{$key} = $f1;
 			} else {
@@ -2608,14 +2644,13 @@ sub import_from_game {
 			my $key = "$from_r.$id";
 			if ($Exports{$key}) {
 				my ($fname, $modtime) = split($Sep, $Exports{$key});
-				### game data trumps server data for X mins
-				my $age2 = $Data{$r}{$id}{Asks_Age};
-				if (! $Data{$r}{$id}{Asks_Reliable}) { $age2 -= $game_data_expire; }
-				if ( $modtime > $age2 )
-				{
+				my $age2 = $Data{$r}{$id}{Asks_Age}; ### order age (cf. marketlog file age)
+				#if ( $modtime > $age2 )
+				if ( !$lastImports{$key} || $modtime > $lastImports{$key}) {
 					&import_game_file($fname, $modtime);
-					$Redraw = 1;
+					$lastImports{$key} = $modtime;
 					$nimports++;
+					$Redraw = 1;
 				} else {
 					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Asks_Reliable} ? 'game' : 'html')." data (asks) \n";
 				}
@@ -2626,12 +2661,12 @@ sub import_from_game {
 			if ($Exports{$key2}) {
 				my ($fname, $modtime) = split($Sep, $Exports{$key2});
 				my $age2 = $Data{$r}{$id}{Bids_Age};
-				if (! $Data{$r}{$id}{Bids_Reliable}) { $age2 -= $game_data_expire; }
-				if ( $modtime > $age2 )
-				{
+				#if ( $modtime > $age2 )
+				if ( !$lastImports{$key} || $modtime > $lastImports{$key}) {
 					&import_game_file($fname, $modtime);
-					$Redraw = 1;
+					$lastImports{$key} = $modtime;
 					$nimports++;
+					$Redraw = 1;
 				} else {
 					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Bids_Reliable} ? 'game' : 'html')." data (bids)\n";
 				}
@@ -2643,21 +2678,62 @@ sub import_from_game {
 	return $Redraw;
 }
 
+### refresh(): update loop, called every N sec
+my $last_update_server = 0;
+sub server_data_init {
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+	if (not $mtime) { 
+		print "\n".&time2s()." waiting for cargo file..."; 
+		while (not $mtime) {
+			($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+			print ".";
+			sleep 1;
+		}
+		print "done\n";
+	}
+}
+sub refresh_server_data {
+	#print &time2s()." refresh_server_data()...";
+
+	my $Redraw = 0;
+
+	### check if evecentral data has changed (cargo file)
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
+	if ($mtime and ($mtime > $last_update_server)) {
+		$Redraw ||= &import_from_server();
+		&export_crest_reqs(); ### request crest data for new items
+	}
+
+	### check if marketlogs files have changed
+	$Redraw ||= &import_from_game();
+		
+
+	if ($Redraw) { 
+		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
+		my $mod_ago = (defined $mtime) ? ((time - $mtime)."s ago") : ("never");
+		print &time2s()." refresh_server_data(): last $update_ago, file mod $mod_ago\n";
+		$last_update_server = time;
+
+		&export_my_data();
+		&redraw(); 
+	}
+}
+
+
 
 
 
 ### main()
 &import_item_db;
 &import_my_data();
-&refresh_server_data(1); 
-&export_crest_reqs();
+&server_data_init(); 
 
 my $repeat1 = $w1->repeat( 3000, \&refresh_server_data);
-my $repeat2 = $w1->repeat(20000, \&notify_refresh);
-my $repeat3 = $w1->repeat( 3000, \&refresh_game_data);
-my $repeat4 = $w1->repeat( 3000, \&export_crest_reqs);
-#$w1->repeat($glow_ms, \&test_refresh);
+#my $repeat2 = $w1->repeat(20000, \&notify_refresh);
+my $repeat4 = $w1->repeat( 15000, \&export_crest_reqs); ### refresh crest data for all items every N sec
 #$repeat2->cancel(); # HOWTO: cancel a repeating process
+
 
 
 
@@ -2668,11 +2744,6 @@ my @fields_indicator = (
 	-image,
 	-style,
 );
-foreach my $f2 (@fields_indicator) {
-	my $o2 = $w1->indicatorCget('Amarr -> Jita', $f2);
-	#print ">>> indicator option $f2 => $o2\n";
-	
-}
 
 my $style_indic = $w1->ItemStyle('image', 
 #	-foreground => $color_fg, 		# fail
@@ -2680,10 +2751,9 @@ my $style_indic = $w1->ItemStyle('image',
 	-background => $color_fg,  		# Y
 	-activebackground => $color_fg,  	# Y
 );
-$w1->indicatorConfigure('Amarr -> Jita', -style => $style_indic); ### works (for backgrounds)
+#$w1->indicatorConfigure('Amarr -> Jita', -style => $style_indic); ### works (for backgrounds)
 #$w1->indicatorConfigure('Jita -> Amarr', -background => $color_fg); ### fail
 
-my $style = $w1->indicatorCget('Amarr -> Jita', -style);
 my @fields_style2 = (
 	'-foreground',
 	'-background',
@@ -2693,10 +2763,6 @@ my @fields_style2 = (
 	'-padx',
 	'-padx',
 );
-foreach my $f (@fields_style2) {
-	my $o = $style->cget($f);
-	#print ">>> indicator style option $f => $o\n";
-}
 
 my $imgopen = $mw->Getimage('minusarm');
 my $imgclose = $mw->Getimage('plus');
@@ -2718,6 +2784,6 @@ MainLoop;
 print "MainLoop() exit\n";
 
 
-system("taskkill /F /T /IM php.exe");
-system("taskkill /F /T /IM perl.exe"); # pwn
 #system("taskkill /PID $pid_skynet");  # fail
+system("taskkill /F /T /IM php.exe");  # pwn
+system("taskkill /F /T /IM perl.exe");

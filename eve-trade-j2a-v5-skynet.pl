@@ -1505,7 +1505,7 @@ while (1) {
 
 	### data for dashboard
 	my $FH;
-	open($FH,'>:crlf', $cargo_filename); ### TODO: lock file 
+	open($FH,'>:crlf', $cargo_filename);
 	flock($FH, LOCK_EX);
 	foreach my $r (@routes) {
 		my ($from_id, $to_id) = @$r;

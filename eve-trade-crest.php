@@ -40,6 +40,7 @@ $handler->getRegions();
 $item_fname2iname = array(
 	'GDN-9 Nightstalker Combat Goggles' 		=> 'GDN-9 "Nightstalker" Combat Goggles',
 	'Odin Synthetic Eye (left_gray)' 		=> 'Odin Synthetic Eye (left/gray)',
+	'Men\'s \'Hephaestus\' Shoes (white_red)' 		=> 'Men\'s \'Hephaestus\' Shoes (white/red)',
 	'SPZ-3 Torch Laser Sight Combat Ocular Enhancer (right_black)' => 'SPZ-3 "Torch" Laser Sight Combat Ocular Enhancer (right/black)',
 	'Public Portrait_ How To' 			=> 'Public Portrait: How To',
 	'Men\'s \'Ascend\' Boots (brown_gold)' 		=> 'Men\'s \'Ascend\' Boots (brown/gold)',
@@ -101,7 +102,7 @@ while (1)
     // check if request file updated
     clearstatcache();
     $mtime = filemtime($fnameReqs);
-    if ($mtime <= $last) { sleep(1); continue; } 
+    if (!$mtime or $mtime <= $last) { sleep(1); continue; } 
     
     
     // import request file => rowsRaw[]
@@ -165,7 +166,8 @@ while (1)
         if ($pass > 1) {echo "\x07";}
         
         // populate Orders[reg][item][]
-        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id, Pass $pass\n";
+        $suffix = ($pass == 1) ? ("") : (", Pass #$pass");
+        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
         $handler->getMultiMarketOrders(
             $typeIds, 
             $reg_id2, 
@@ -204,10 +206,12 @@ while (1)
     
     // export to Marketlogs files
     $nexports = 0;
-    foreach ($Orders as $reg_id => $Orders2) {
-        foreach ($Orders2 as $i => $obj) {
-            $row = $obj->row;
-            $orders = $obj->orders;
+    // TODO: check if more recent Marketlog file already exists
+    $exportQueue = array();
+    foreach ($Orders as $reg_id => $OrdersByItem) {
+        foreach ($OrdersByItem as $i => $mkt) {
+            $row = $mkt->row;
+            $orders = $mkt->orders;
             $text = formatHeader().formatOrders($orders, $reg_id);
             $fname2 = getExportFilename($row);
 
@@ -215,11 +219,15 @@ while (1)
             $fname_short = substr($fname2, strpos($fname2, $export_prefix) + strlen($export_prefix));
             //echo time2s()."export (x$n) $fname_short\n";
 
-            export($fname2, $text);
+            $exportQueue[$fname2] = $text;
+            //export($fname2, $text);
             $nexports++;
         }
     }
     if ($nexports > 0) { echo time2s()."php.export($nexports)\n"; }
+    foreach ($exportQueue as $fname2 => $text) {
+      export($fname2, $text);
+    }
     
     //echo time2s()."sleeping 60 secs...\n";
     sleep(1);
@@ -247,7 +255,7 @@ function getExportFilename($row)
 
     // construct export filename
     //$fname_region2 = $handler->getRegion($reg_id)->name;
-    $fname_time = date("Y.m.d His", time() - 300);
+    $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
 
