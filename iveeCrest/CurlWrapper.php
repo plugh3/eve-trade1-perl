@@ -40,6 +40,8 @@ class CurlWrapper
      */
     protected $ch;
 
+    protected $requeued;
+
     /**
      * Constructor.
      * 
@@ -52,6 +54,7 @@ class CurlWrapper
     {
         $this->userAgent = $userAgent;
         $this->ch = curl_init();
+        $this->requeued = array();
         
         //set standard CURL options
         curl_setopt_array(
@@ -266,6 +269,10 @@ class CurlWrapper
             } catch (Exceptions\KeyNotFoundInCacheException $e){
                 $hrefsToQuery[] = $href;
             }
+            if (! in_array($href, $hrefsToQuery)) { // $hrefsToQuery: not in cache
+                $url_short = str_replace(Config::getCrestBaseUrl(), '', $href);
+                echo time2s()."cache ".$url_short."\n";
+            }
         }
 
         // make sure the rolling window isn't greater than the number of hrefs
@@ -312,6 +319,7 @@ class CurlWrapper
 
                 //find the Response object matching the URL
                 $res = $responses[$info['url']];
+                $url_short = str_replace(Config::getCrestBaseUrl(), '', $info['url']);
 
                 //set info and content to Response object
                 $res->setInfo($info);
@@ -323,9 +331,18 @@ class CurlWrapper
                     if($cache)
                         $this->cache->setItem($res);
                     $callback($res);
+                    if (isset($this->requeued[$info['url']])) {
+                      $this->requeued[$info['url']] = NULL;
+                      time2s().">>> recaptured ".$url_short."\n";
+                    }
+                    echo time2s()."got   ".$url_short."\n";
+
                 } elseif (isset($errCallback)) {
-                    echo time2s()."cw.asyncMultiGet(): curl_multi error, http code ".$info['http_code']."\n";
+                    echo time2s()."cw.asyncMultiGet(): curl_multi, http ".$info['http_code']."\n";
+                    echo time2s()."requeueing ".$url_short."\n";
                     $errCallback($res);
+                    $hrefsToQuery[] = $info['url']; //put back on queue
+                    $this->requeued[$info['url']] = true;
                 }
                 //remove the reference to response to conserve memory on large batches
                 $responses[$info['url']] = null;
@@ -345,7 +362,7 @@ class CurlWrapper
         } while ($running > 0);
 
         curl_multi_close($master);
-    }
+     }
 
     /**
      * Creates new curl handle and adds to curl multi handle. Also creates the corresponding Response object.

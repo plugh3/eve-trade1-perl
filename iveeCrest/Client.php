@@ -367,7 +367,10 @@ class Client
                                     $ret[$indexFunc($item2)] = $element2;
                             }
                         }, 
-                        function (Response $res) { echo time2s().">>> cl.gather().callbackErrMarketType()\n"; var_dump($res); }, //errCallback
+                        function (Response $res) { 
+                          //echo time2s().">>> cl.gather().callbackErrMarketType() ".str_replace(Config::getCrestBaseUrl(), '', $res->info['url'])."\n"; 
+                          var_dump($res);
+                        }, //errCallback
                         $accept
                     );
                     break;
@@ -395,7 +398,7 @@ class Client
      * @return array
      */
     public function gatherCached($endpointHref, callable $indexFunc = null, callable $elementFunc = null, 
-        $accept = null, $ttl = 3600, $subCommandKey = null
+        $accept = null, $ttl = 15, $subCommandKey = null
     ) {
         //echo time2s()."cl.gatherCached($endpointHref)\n";
         $dataKey = 'gathered:' . $endpointHref . (isset($subCommandKey) ? ',' . $subCommandKey : '');

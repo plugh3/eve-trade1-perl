@@ -54,6 +54,7 @@ if (!$pid_crest) {
 	#system("run-crest.bat"); ## same window
 	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
 	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
+	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php > out-crest.txt 2>&1"); ## new window + log
 	exit;
 }
 $pid_crest = substr($pid_crest, 1);
@@ -2701,7 +2702,8 @@ sub refresh_server_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
 	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
 	if ($mtime and ($mtime > $last_update_server)) {
-		$Redraw ||= &import_from_server();
+		&import_from_server();
+		#$Redraw ||= &import_from_server();
 		&export_crest_reqs(); ### request crest data for new items
 	}
 
@@ -2731,7 +2733,7 @@ sub refresh_server_data {
 
 my $repeat1 = $w1->repeat( 3000, \&refresh_server_data);
 #my $repeat2 = $w1->repeat(20000, \&notify_refresh);
-my $repeat4 = $w1->repeat( 15000, \&export_crest_reqs); ### refresh crest data for all items every N sec
+#my $repeat4 = $w1->repeat( 15000, \&export_crest_reqs); ### refresh crest data for all items every N sec
 #$repeat2->cancel(); # HOWTO: cancel a repeating process
 
 

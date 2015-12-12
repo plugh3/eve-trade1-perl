@@ -23,8 +23,6 @@ my $maxSpace = 8967;
 my $maxSpace_html = $maxSpace;
 ### GET rate throttling
 my $getDelay = 0; 
-my $loop_min = 60;
-my $loop_rdm = 0;
 #my $getDelay = 5; ### min 5 sec between GETs
 
 my $nGets = 0;
@@ -1546,10 +1544,15 @@ while (1) {
 	#my $time_fn_parse_orders = 0;
 
 
-	### 2.0-2.5 min between loops ($refresh_min + rand(30))
-	my $now = time;
+
+
+	### min delay between loops ($loop_min + rand($loop_rdm))
+	my $loop_min = 60;
+	my $loop_rdm = 0;
+	my $now = time;
 	my $nap = 0;
-	if ($now - $last_loop < $loop_min) { $nap = ($now - $last_loop) + int(rand($loop_rdm)); }
+	if ($now - $last_loop < $loop_min) { $nap = $loop_min - ($now - $last_loop) + int(rand($loop_rdm)); }
+	print "loop=".($now-$last_loop).", nap=".$nap.".0s\n";
 	$last_loop = $now;
 	print "\nSleeping for ".sprintf("%3i", $nap)." sec"; flush STDOUT;
 	for my $n (1..$nap) {

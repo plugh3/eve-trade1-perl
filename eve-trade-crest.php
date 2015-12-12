@@ -198,7 +198,7 @@ while (1)
             function (\iveeCrest\Response $r) use ($rowByItem) {
               echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
               //echo "\x07"; # beep
-              if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
+              //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             }
         ); // end getMultiMarketOrders() call
       }
@@ -314,5 +314,5 @@ function formatOrders($orders, $reg_id)
 function time2s($time = '')
 {
     if ($time == '') { $time = time(); }
-    return date("h:i:sa ", $time - 7*60*60);
+    return date("h:i:sa ", $time - 8*60*60);
 }

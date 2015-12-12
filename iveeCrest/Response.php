@@ -236,7 +236,7 @@ class Response implements ICacheable
                         strpos($this->key, "/orders/buy/")  !== false) 
                     {
                         // override TTL for market orders
-                        return 60;
+                        return 15;
                     } else {
                         return (int) substr(trim($frag), 8);
                     }
