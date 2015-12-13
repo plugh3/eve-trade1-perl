@@ -1193,11 +1193,15 @@ my %primary_stations = (
 	"Amarr" => "Amarr VIII (Oris) - Emperor Family Academy",
 	"Dodixie" => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
 );
-my %loc2reg = (
+my %stn2reg = (
 	"Jita IV - Moon 4 - Caldari Navy Assembly Plant" => 'The Forge',
 	"Amarr VIII (Oris) - Emperor Family Academy" => 'Domain',
 	"Dodixie IX - Moon 20 - Federation Navy Assembly Plant" => 'Sinq Laison',
 );
+my %reg2hub = ();
+foreach my $stn (keys %stn2reg) {
+	$reg2hub{$stn2reg{$stn}} = $stn;
+}
 sub loc_i2n {
 	my ($sysid) = @_;
 	return $primary_stations{$sys_names{$sysid}};
@@ -1318,7 +1322,7 @@ sub locs2r {
 	my ($from, $to) = @_;
 	return &where2s($from).' -> '.&where2s($to);
 }
-sub route2locs {
+sub route2stns {
 	my ($route) = @_;
 	$route =~ m/(.*) -\> (.*)/;
 	my ($from_s, $to_s) = ($1, $2);
@@ -1605,6 +1609,7 @@ sub import_from_server {
 			my $ask_loc = $kludge{$bid_loc}{$id};
 			my $r = &locs2r($ask_loc, $bid_loc);
 
+			### import route parameters from evecentral
 			if (! $Data{$r}{$id} ) {
 				$Data{$r}{$id}{From} = $ask_loc;
 				$Data{$r}{$id}{To} = $bid_loc;
@@ -1619,30 +1624,30 @@ sub import_from_server {
 				$Data{$r}{$id}{Asks_Age} = 0;
 			}
 
+			### do NOT import orders from evecentral, unless we already have order data 
+			#if (! $Data{$r}{$id}{Bids}) {
+			#	#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
+			#	$Data{$r}{$id}{Bids} = ();
+			#	$Data{$r}{$id}{Bids_Reliable} = 0;
+			#	foreach my $bid (@{$Bids{$bid_loc}{$id}}) {
+			#		if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
+			#		push (@{$Data{$r}{$id}{Bids}}, $bid);
+			#	}
+			#} else { 
+			#	#print ">>> ignoring server bids for $items_name{$id} \[$r\]\n"; 
+			#}
 			### import orders from evecentral, unless we already have order data 
-			if (! $Data{$r}{$id}{Bids}) {
-				#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
-				$Data{$r}{$id}{Bids} = ();
-				$Data{$r}{$id}{Bids_Reliable} = 0;
-				foreach my $bid (@{$Bids{$bid_loc}{$id}}) {
-					if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
-					push (@{$Data{$r}{$id}{Bids}}, $bid);
-				}
-			} else { 
-				#print ">>> ignoring server bids for $items_name{$id} \[$r\]\n"; 
-			}
-			### import orders from evecentral, unless we already have order data 
-			if (! $Data{$r}{$id}{Asks}) {
-				#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
-				$Data{$r}{$id}{Asks} = ();
-				$Data{$r}{$id}{Asks_Reliable} = 0;
-				foreach my $ask (@{$Asks{$ask_loc}{$id}}) {
-					if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
-					push (@{$Data{$r}{$id}{Asks}}, $ask);
-				}
-			} else { 
-				#print ">>> ignoring server asks for $items_name{$id} \[$r\]\n"; 
-			}
+			#if (! $Data{$r}{$id}{Asks}) {
+			#	#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
+			#	$Data{$r}{$id}{Asks} = ();
+			#	$Data{$r}{$id}{Asks_Reliable} = 0;
+			#	foreach my $ask (@{$Asks{$ask_loc}{$id}}) {
+			#		if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
+			#		push (@{$Data{$r}{$id}{Asks}}, $ask);
+			#	}
+			#} else { 
+			#	#print ">>> ignoring server asks for $items_name{$id} \[$r\]\n"; 
+			#}
 		}
 	}
 	#print &time2s()." import_cargo_lists()\n";
@@ -1767,7 +1772,7 @@ sub import_my_data {
 			if (! $Data{$r}{$i}) { 
 				$Data{$r}{$i}{Route} = $r;
 				$Data{$r}{$i}{Item} = $i;
-				my ($ask_loc, $bid_loc) = &route2locs ($r);
+				my ($ask_loc, $bid_loc) = &route2stns ($r);
 				$Data{$r}{$i}{From} = $ask_loc;
 				$Data{$r}{$i}{To} = $bid_loc;
 				$Data{$r}{$i}{Ignore} = 0;
@@ -2057,7 +2062,7 @@ sub filter_ignore {
 	my ($bid_price0, $bid_vol0, $bid_rem0, $bid_when0) = split(':', $bid0);
 	my $ask0 = $Data{$r}{$id}{Asks}[0];
 	my ($ask_price0, $ask_vol0, $ask_rem0, $ask_when0) = split(':', $ask0);
-	my ($ask_loc, $bid_loc) = &route2locs($r);
+	my ($ask_loc, $bid_loc) = &route2stns($r);
 	
 	
 	### Scenario 4: illegal
@@ -2454,28 +2459,33 @@ sub export_crest_reqs {
 	#else { print &time2s()." export_crest_reqs(): dup\n"; }
 }
 
+### ignores any orders at non-hub stations
 sub import_game_file {
-	my ($fname, $modtime) = @_;
+	my ($fname, $fileTime) = @_;
 	#print "import_game_file() $fname\n";
 
-	my $FH;
-	open($FH, '<:crlf', $fname);
 
 	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
-	my $reg = $+{region};
-	my $item = $+{item};
-	if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
-	my $id = $items_id{$item};
-	$modtime = &fname2time($fname); ### override system modtime with evetime
-	#print &time2s()." import() ".sprintf("%-13s", "[".$reg."]")." $item\n";
+	my $fileReg = $+{region};
+	my $fileStn = $reg2hub{$fileReg};
+	my $fileItem = ($item_fname2iname{$+{item}}) ? ($item_fname2iname{$+{item}}) : ($+{item});
+	my $id = $items_id{$fileItem};
+	#$fileTime = &fname2time($fname); ### override system modtime with evetime
+	#print &time2s()." import() ".sprintf("%-13s", "[".$fileReg."]")." $fileItem\n";
 
+	if ($fileItem =~ "Megathron") { print &time2s()." >>> import ".$fileItem."\n"; }
+
+
+	### Pass 1: parse marketlog file into bids[] and asks[]
 	my @bids = ();
 	my @asks = ();
 	my $order_loc = 0;
 	my $n_orders = 0;
+	my $FH;
+	open($FH, '<:crlf', $fname);
 	<$FH>; ### header line
 	while (<$FH>) {
-		my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $solarSystemID, $jumps, undef) = split(',');
+		my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $fileRegionID, $solarSystemID, $jumps, undef) = split(',');
 		my $bidask = ($isBid eq 'True') ? 'bid' : 'ask';
 		my $price = $price2;
 		my $vol = $volRemaining;
@@ -2483,9 +2493,9 @@ sub import_game_file {
 		my $ignore = 0;
 
 		### skip if minimum volume (scam)
-		if ($minVolume > 1) { next; }
+		#if ($minVolume > 1) { next; }
 
-		### skip if non-hub station
+		### ignore orders at non-hub stations
 		my $where_id = $stn2sys{$stationID};
 		if (! $where_id) { next; }
 
@@ -2506,68 +2516,85 @@ sub import_game_file {
 	if ($n_orders == 0) { 
 		### this is not a fail state
 		### the fact that there are zero bids/asks is valid data
-		print &time2m()." import_game_file(): zero orders imported ".sprintf("%12s", "[".$reg."]")." $item\n";
+		print &time2m()." import_game_file(): zero orders imported ".sprintf("%12s", "[".$fileReg."]")." $fileItem\n";
 	}
 
-	my @asks2 = sort {
+	### Pass 2: sort into bidsSorted[] and askSorted[]
+	my @asksSorted = sort {
 		my ($price_a) = split(':', $a);
 		my ($price_b) = split(':', $b);
 		$price_a <=> $price_b;
 	} @asks;
-	my @bids2 = sort {
+	my @bidsSorted = sort {
 		my ($price_a) = split(':', $a);
 		my ($price_b) = split(':', $b);
 		$price_b <=> $price_a;
 	} @bids;
 
+	### Pass 3: import new data to all relevant Routes
+	### wipe old data first
 	my $n_asks = 0;
 	my $n_bids = 0;
 	foreach my $r (@Routes) {
-		my ($ask_loc, $bid_loc) = &route2locs($r);
-		foreach my $i2 (keys %{$Data{$r}}) {
-			if ($i2 != $id) { next; } 
-			### same item
+		my ($startStn, $endStn) = &route2stns($r); ### station fullname
+
+		### check if this file is relevant to this Route
+		if ($fileReg ne $stn2reg{$startStn} and $fileReg ne $stn2reg{$endStn}) { next; } 
+		if (not exists $Data{$r}{$id}) { next; } ### item not relevant to this Route
 			
 
-			#print ">>> locs:\n  $ask_loc  X\n  $bid_loc  X\n  $order_loc\n";
-			if ($order_loc eq $ask_loc || $loc2reg{$ask_loc} eq $reg) {
+		#print ">>> locs:\n  $startStn  X\n  $endStn  X\n  $order_loc\n";
 
-				### skip if out-of-date
-				#if ($modtime + $game_data_expire < $Data{$r}{$id}{Asks_Age}) { next; }
-				if ($modtime < $Data{$r}{$id}{Asks_Age}) { next; }
+		### check if asks are relevant to this Route
+		if ($fileStn eq $startStn) {
 
-				$Data{$r}{$id}{Asks} = ();
-				foreach my $ask (@asks2) { 
-					if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
-					push(@{$Data{$r}{$id}{Asks}}, $ask); 
-					$n_asks++; 
-				}
-				$Data{$r}{$id}{Asks_Age} = $modtime;
-				$Data{$r}{$id}{Asks_Reliable} = 1;
-				$Redraw = 1;
-			} elsif ($order_loc eq $bid_loc  || $loc2reg{$bid_loc} eq $reg) {
+			### don't check age, just override data
+			### skip if out-of-date
+			#if ($fileTime + $game_data_expire < $Data{$r}{$id}{Asks_Age}) { next; }
+			#if ($fileTime <= $Data{$r}{$id}{Asks_Age}) { next; }
 
-				### skip if out-of-date
-				#if ($modtime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
-				if ($modtime < $Data{$r}{$id}{Bids_Age}) { next; }
+			$Data{$r}{$id}{Asks} = (); ### wipe current list of asks
+			$Data{$r}{$id}{Asks_Reliable} = 1;
+			$Data{$r}{$id}{Asks_Age} = 0;			
+			foreach my $ask (@asksSorted) { 
+				### don't need to check for dups bc this is a marketlog file
+				#if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
+				push(@{$Data{$r}{$id}{Asks}}, $ask); 
+				$n_asks++; 
 
-				$Data{$r}{$id}{Bids} = ();
-				foreach my $bid (@bids2) { 
-					if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
-					push(@{$Data{$r}{$id}{Bids}}, $bid); 
-					$n_bids++;
-				}
-				$Data{$r}{$id}{Bids_Age} = $modtime;
-				$Data{$r}{$id}{Bids_Reliable} = 1;
-				$Redraw = 1;
-			} else { 
-				next; 
+				### TODO: need to update age here?
+				my ($price, $vol, $ignore, $when) = split(':', $ask);
+				$Data{$r}{$id}{Asks_Age} = max($Data{$r}{$id}{Asks_Age}, $when); ### most recent order
 			}
+			$Redraw = 1;
+			
+		### check if bids are relevant to this Route
+		} elsif ($fileStn eq $endStn) {
+			### skip if out-of-date
+			#if ($fileTime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
+			#if ($fileTime <= $Data{$r}{$id}{Bids_Age}) { next; }
+
+			$Data{$r}{$id}{Bids} = (); ### wipe current list of asks
+			$Data{$r}{$id}{Bids_Reliable} = 1;
+			$Data{$r}{$id}{Bids_Age} = 0;
+			foreach my $bid (@bidsSorted) { 
+				### don't need to check for dups bc this is a marketlog file
+				#if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
+				push(@{$Data{$r}{$id}{Bids}}, $bid); 
+				$n_bids++;
+
+				### TODO: need to update age here?
+				my ($price, $vol, $ignore, $when) = split(':', $bid);
+				$Data{$r}{$id}{Bids_Age} = max($Data{$r}{$id}{Bids_Age}, $when); ### most recent order
+			}
+			$Redraw = 1;
+		} else { 
+			next; 
 		}
 	}
 
 	close $FH;
-	#print "game data: $items_name{$id} ".sprintf("%11s", "\[$reg\]")." - $n_asks asks, $n_bids bids\n";
+	#print "game data: $items_name{$id} ".sprintf("%11s", "\[$fileReg\]")." - $n_asks asks, $n_bids bids\n";
 }
 
 my %lastImports = ();
@@ -2585,7 +2612,8 @@ sub import_from_game {
 	my @files = readdir($DIR);
 	closedir($DIR);
 
-	### store list of game files as hash index
+	### read marketlog dir into Exports[]
+	### purge older files
 	foreach my $fname (@files) {
 		if ($fname =~ /^(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/) {
 			my $fname_full = $dirname.'\\'.$fname;
@@ -2606,12 +2634,13 @@ sub import_from_game {
 				next;
 			}
 
-			### set up age index
+			### dictionary key = <region> + <item>
 			my $key = "$reg.$id";
-			$modtime = &fname2time($fname); ### override system time with evetime
+			$modtime = &fname2time($fname); ### evetime of file export
+			### dictionary value = <fname> + <modtime>
 			my $f1 = join($Sep, $fname_full, $modtime);
 			
-			### check for dups, delete older
+			### if dup delete older
 			if (! $Exports{$key}) {
 				$Exports{$key} = $f1;
 			} else {
@@ -2644,7 +2673,7 @@ sub import_from_game {
 			### check From region
 			my $key = "$from_r.$id";
 			if ($Exports{$key}) {
-				my ($fname, $modtime) = split($Sep, $Exports{$key});
+				my ($fname, $modtime) = split($Sep, $Exports{$key}); ### evetime of marketlog export
 				my $age2 = $Data{$r}{$id}{Asks_Age}; ### order age (cf. marketlog file age)
 				#if ( $modtime > $age2 )
 				if ( !$lastImports{$key} || $modtime > $lastImports{$key}) {
