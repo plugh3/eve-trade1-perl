@@ -1443,7 +1443,7 @@ sub error {
 ### main()
 &import_item_db;
 
-my $last_loop = time;
+my $last_loop = 0;
 while (1) {
 	### reset market datastore
 	%Bids = ();
@@ -1550,9 +1550,10 @@ while (1) {
 	my $loop_min = 60;
 	my $loop_rdm = 0;
 	my $now = time;
+	my $last_elapsed = $now - $last_loop;
 	my $nap = 0;
-	if ($now - $last_loop < $loop_min) { $nap = $loop_min - ($now - $last_loop) + int(rand($loop_rdm)); }
-	print "loop=".($now-$last_loop).", nap=".$nap.".0s\n";
+	if ($last_elapsed < $loop_min) { $nap = $loop_min - $last_elapsed + int(rand($loop_rdm)); }
+	print "loop=".$last_elapsed.", nap=".$nap.".0s\n";
 	$last_loop = $now;
 	print "\nSleeping for ".sprintf("%3i", $nap)." sec"; flush STDOUT;
 	for my $n (1..$nap) {
