@@ -303,7 +303,7 @@ function formatOrders($orders, $reg_id)
         $stationID = $x->location->id;
         $regionID = $reg_id;
         $solarSystemID = 30000000; //$x->location->name; // convert station to solar system
-        $jumps = 0;
+        $jumps = 32768; // = Region-wide + 1 // TODO: calculate how many jumps away from hub
 
         $line = "$price,$volRemaining,$typeID,$range,$orderID,$volEntered,$minVolume,$bid,$issueDate,$duration,$stationID,$regionID,$solarSystemID,$jumps,\r\n";
         //echo $line;

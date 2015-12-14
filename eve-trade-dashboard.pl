@@ -52,8 +52,8 @@ my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
-	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
-	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
+	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	system("start run-crest.bat"); ## new window, persist after die (DEBUG)
 	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php > out-crest.txt 2>&1"); ## new window + log
 	exit;
 }
@@ -1156,7 +1156,6 @@ my @Routes = (
 	"Amarr -> Dodixie",
 	"Dodixie -> Amarr",
 );
-
 my %is_region = ();
 my $sys_amarr = 30002187;
 my $sys_jita = 30000142;
@@ -1168,11 +1167,33 @@ my $reg_thespire = 10000018; $is_region{$reg_thespire} = 1;
 my $stn_amarr = 60008494;
 my $stn_jita = 60003760;
 my $stn_dodixie = 60011866;
+my @Hubs = (
+	$stn_amarr,
+	$stn_jita,
+	$stn_dodixie,
+);
+
 my %stn2sys = (
 	$stn_amarr => $sys_amarr,
 	$stn_jita => $sys_jita,
 	$stn_dodixie => $sys_dodixie,
 );
+
+### in: station ID
+### based on @Hubs list
+my %is_hub = ();
+sub stn_is_hub {
+	my ($stn_id) = @_;
+
+	### init lookup table
+	if (! %is_hub) {
+		foreach my $_id (@Hubs) {
+			$is_hub{$_id} = 1;
+		}
+	}
+	
+	return $is_hub{$stn_id};
+}
 
 my %sys_names = (
 	$sys_amarr => "Amarr",
@@ -1198,9 +1219,26 @@ my %stn2reg = (
 	"Amarr VIII (Oris) - Emperor Family Academy" => 'Domain',
 	"Dodixie IX - Moon 20 - Federation Navy Assembly Plant" => 'Sinq Laison',
 );
-my %reg2hub = ();
-foreach my $stn (keys %stn2reg) {
-	$reg2hub{$stn2reg{$stn}} = $stn;
+my %_hub2sys = (
+	"Jita IV - Moon 4 - Caldari Navy Assembly Plant" => $sys_jita,
+	"Amarr VIII (Oris) - Emperor Family Academy" => $sys_amarr,
+	"Dodixie IX - Moon 20 - Federation Navy Assembly Plant" => $sys_dodixie,
+);
+sub hub2sys {
+	my ($hubStnFullName) = @_;
+	my $hubSysID = $_hub2sys{$hubStnFullName};
+	return $hubSysID;
+}
+my %_reg2hub = ();
+sub reg2hub {
+	my ($reg) = @_;
+	### init lookup table
+	if (! %_reg2hub) {
+		foreach my $stnName (keys %stn2reg) {
+			$_reg2hub{$stn2reg{$stnName}} = $stnName;
+		}
+	}
+	return $_reg2hub{$reg};
 }
 sub loc_i2n {
 	my ($sysid) = @_;
@@ -1718,7 +1756,7 @@ sub issuedate2time {
 }
 sub line2time {
 	my ($row) = @_;
-	my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $solarSystemID, $jumps, undef) = split(',', $row);
+	my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $regionID, $systemID, $jumps, undef) = split(',', $row);
 	return issuedate2time($issueDate);
 }
 
@@ -2466,15 +2504,12 @@ sub import_game_file {
 
 
 	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
-	my $fileReg = $+{region};
-	my $fileStn = $reg2hub{$fileReg};
+	my $fileRegName = $+{region};
+	my $fileHubStnFullname = &reg2hub($fileRegName);
 	my $fileItem = ($item_fname2iname{$+{item}}) ? ($item_fname2iname{$+{item}}) : ($+{item});
 	my $id = $items_id{$fileItem};
 	#$fileTime = &fname2time($fname); ### override system modtime with evetime
 	#print &time2s()." import() ".sprintf("%-13s", "[".$fileReg."]")." $fileItem\n";
-
-	if ($fileItem =~ "Megathron") { print &time2s()." >>> import ".$fileItem."\n"; }
-
 
 	### Pass 1: parse marketlog file into bids[] and asks[]
 	my @bids = ();
@@ -2485,9 +2520,9 @@ sub import_game_file {
 	open($FH, '<:crlf', $fname);
 	<$FH>; ### header line
 	while (<$FH>) {
-		my ($price2, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $stationID, $fileRegionID, $solarSystemID, $jumps, undef) = split(',');
+		my ($orderPrice, $volRemaining, $typeID, $range, $orderID, $volEntered, $minVolume, $isBid, $issueDate, $duration, $orderStationID, $orderRegionID, $orderSystemID, $jumps, undef) = split(',');
 		my $bidask = ($isBid eq 'True') ? 'bid' : 'ask';
-		my $price = $price2;
+		my $price = $orderPrice;
 		my $vol = $volRemaining;
 		my $when = &issuedate2time($issueDate);
 		my $ignore = 0;
@@ -2495,28 +2530,26 @@ sub import_game_file {
 		### skip if minimum volume (scam)
 		#if ($minVolume > 1) { next; }
 
-		### ignore orders at non-hub stations
-		my $where_id = $stn2sys{$stationID};
-		if (! $where_id) { next; }
-
-		my $where = &loc_i2n($where_id);
-		if (! $order_loc) { $order_loc = $where; }
-		if ($order_loc ne $where) { warn "import_game_file(): station mismatch $where vs. $order_loc"; }
-
-		#print "game data: $items_name{$id} $bidask $vol x $price \[$sys_names{$sys}\]\n";
-		#print "game data: ".sprintf("%11s", "\[".&where2s($where)."\]")." $id $bidask $vol x ".sprintf("%.2f", $price)."\n";
-
-		my $tuple = join(':', ($price, $vol, $ignore, $when));
-		if ($bidask eq 'bid') {
-			push(@bids, $tuple); $n_orders++;
-		} else {
-			push(@asks, $tuple); $n_orders++;
+		### keep all hub station orders + regional buy orders
+		my $hubSys = &hub2sys($fileHubStnFullname);
+		if ($range eq "solarsystem") { $range = 0; }
+		if ( &stn_is_hub($orderStationID) or 					### hub order
+		    ($isBid eq 'True' and $range == 32767) or 				### regional buy order
+		    ($isBid eq 'True' and $range > -1 and $orderSystemID == $hubSys) or	### same-system buy order
+		    ($isBid eq 'True' and $jumps <= $range)				### in-range buy order (if jumps known)
+		   ) { 
+			my $tuple = join(':', ($price, $vol, $ignore, $when));
+			if ($bidask eq 'bid') {
+				push(@bids, $tuple); $n_orders++;
+			} else {
+				push(@asks, $tuple); $n_orders++;
+			}
 		}
 	}
 	if ($n_orders == 0) { 
 		### this is not a fail state
 		### the fact that there are zero bids/asks is valid data
-		print &time2m()." import_game_file(): zero orders imported ".sprintf("%12s", "[".$fileReg."]")." $fileItem\n";
+		print &time2s()." import_game_file(): empty marketlog file ".sprintf("%12s", "[".$fileRegName."]")." $fileItem\n";
 	}
 
 	### Pass 2: sort into bidsSorted[] and askSorted[]
@@ -2539,14 +2572,14 @@ sub import_game_file {
 		my ($startStn, $endStn) = &route2stns($r); ### station fullname
 
 		### check if this file is relevant to this Route
-		if ($fileReg ne $stn2reg{$startStn} and $fileReg ne $stn2reg{$endStn}) { next; } 
+		if ($fileRegName ne $stn2reg{$startStn} and $fileRegName ne $stn2reg{$endStn}) { next; } 
 		if (not exists $Data{$r}{$id}) { next; } ### item not relevant to this Route
 			
 
 		#print ">>> locs:\n  $startStn  X\n  $endStn  X\n  $order_loc\n";
 
 		### check if asks are relevant to this Route
-		if ($fileStn eq $startStn) {
+		if ($fileHubStnFullname eq $startStn) {
 
 			### don't check age, just override data
 			### skip if out-of-date
@@ -2569,7 +2602,7 @@ sub import_game_file {
 			$Redraw = 1;
 			
 		### check if bids are relevant to this Route
-		} elsif ($fileStn eq $endStn) {
+		} elsif ($fileHubStnFullname eq $endStn) {
 			### skip if out-of-date
 			#if ($fileTime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
 			#if ($fileTime <= $Data{$r}{$id}{Bids_Age}) { next; }
@@ -2635,10 +2668,10 @@ sub import_from_game {
 			}
 
 			### dictionary key = <region> + <item>
+			### dictionary value = <fname> + <ftime>
 			my $key = "$reg.$id";
-			$modtime = &fname2time($fname); ### evetime of file export
-			### dictionary value = <fname> + <modtime>
-			my $f1 = join($Sep, $fname_full, $modtime);
+			my $ftime = &fname2time($fname); ### evetime of file export
+			my $f1 = join($Sep, $fname_full, $ftime);
 			
 			### if dup delete older
 			if (! $Exports{$key}) {
@@ -2646,8 +2679,8 @@ sub import_from_game {
 			} else {
 				### 2 files for same region-item pair => most recent wins
 				my $f2 = $Exports{$key};
-				my ($fname2_full, $modtime2) = split($Sep, $f2);
-				if ($modtime2 >= $modtime) {
+				my ($fname2_full, $ftime2) = split($Sep, $f2);
+				if ($ftime2 >= $ftime) {
 					unlink $fname_full;
 				} else {
 					unlink $fname2_full;
@@ -2673,32 +2706,30 @@ sub import_from_game {
 			### check From region
 			my $key = "$from_r.$id";
 			if ($Exports{$key}) {
-				my ($fname, $modtime) = split($Sep, $Exports{$key}); ### evetime of marketlog export
-				my $age2 = $Data{$r}{$id}{Asks_Age}; ### order age (cf. marketlog file age)
-				#if ( $modtime > $age2 )
-				if ( !$lastImports{$key} || $modtime > $lastImports{$key}) {
-					&import_game_file($fname, $modtime);
-					$lastImports{$key} = $modtime;
+				my ($fname, $ftime) = split($Sep, $Exports{$key}); ### evetime of marketlog export
+				if ( !$lastImports{$key} || $lastImports{$key} < $ftime) {
+					&import_game_file($fname, $ftime);
+					$lastImports{$key} = $ftime;
 					$nimports++;
 					$Redraw = 1;
 				} else {
-					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Asks_Reliable} ? 'game' : 'html')." data (asks) \n";
+					#print "old file $fname ".&time2s($ftime)." vs ".($Data{$r}{$id}{Asks_Reliable} ? 'game' : 'html')." data (asks) \n";
 				}
 			}
 
 			### check To region
 			my $key2 = "$to_r.$id";
 			if ($Exports{$key2}) {
-				my ($fname, $modtime) = split($Sep, $Exports{$key2});
+				my ($fname, $ftime) = split($Sep, $Exports{$key2});
 				my $age2 = $Data{$r}{$id}{Bids_Age};
 				#if ( $modtime > $age2 )
-				if ( !$lastImports{$key} || $modtime > $lastImports{$key}) {
-					&import_game_file($fname, $modtime);
-					$lastImports{$key} = $modtime;
+				if ( !$lastImports{$key} || $lastImports{$key} < $ftime) {
+					&import_game_file($fname, $ftime);
+					$lastImports{$key} = $ftime;
 					$nimports++;
 					$Redraw = 1;
 				} else {
-					#print "old file $fname ".&time2s($modtime)." vs ".($Data{$r}{$id}{Bids_Reliable} ? 'game' : 'html')." data (bids)\n";
+					#print "old file $fname ".&time2s($ftime)." vs ".($Data{$r}{$id}{Bids_Reliable} ? 'game' : 'html')." data (bids)\n";
 				}
 			}
 		}
@@ -2734,18 +2765,17 @@ sub refresh_server_data {
 		&import_from_server();
 		#$Redraw ||= &import_from_server();
 		&export_crest_reqs(); ### request crest data for new items
-	}
 
-	### check if marketlogs files have changed
-	$Redraw ||= &import_from_game();
-		
-
-	if ($Redraw) { 
 		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
 		my $mod_ago = (defined $mtime) ? ((time - $mtime)."s ago") : ("never");
 		print &time2s()." refresh_server_data(): last $update_ago, file mod $mod_ago\n";
 		$last_update_server = time;
+	}
 
+	### check if marketlogs files have changed
+	$Redraw ||= &import_from_game();
+
+	if ($Redraw) { 
 		&export_my_data();
 		&redraw(); 
 	}
