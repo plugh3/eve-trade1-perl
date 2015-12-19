@@ -834,7 +834,7 @@ my $menucmd_copy_route = ['command', 'Copy route', -command => sub {
 	### ARG: $This
 	my $route = &is_route($This);
 	if (! $route) { return 0; }
-	&output_route($route);
+	&route2clipboard($route);
 }];
 my $menucmd_copy_item = ['command', 'Copy item', -command => sub {
 	### ARG: $This
@@ -1167,10 +1167,10 @@ my $reg_thespire = 10000018; $is_region{$reg_thespire} = 1;
 my $stn_amarr = 60008494;
 my $stn_jita = 60003760;
 my $stn_dodixie = 60011866;
-my @Hubs = (
-	$stn_amarr,
-	$stn_jita,
-	$stn_dodixie,
+my %Hubs = (
+	$stn_jita => "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
+	$stn_amarr => "Amarr VIII (Oris) - Emperor Family Academy",
+	$stn_dodixie => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
 );
 
 my %stn2sys = (
@@ -1180,14 +1180,14 @@ my %stn2sys = (
 );
 
 ### in: station ID
-### based on @Hubs list
+### based on @Hubs_stnid list
 my %is_hub = ();
 sub stn_is_hub {
 	my ($stn_id) = @_;
 
 	### init lookup table
 	if (! %is_hub) {
-		foreach my $_id (@Hubs) {
+		foreach my $_id (keys %Hubs) {
 			$is_hub{$_id} = 1;
 		}
 	}
@@ -1455,7 +1455,7 @@ sub size2expanders {
 ### REAL FNS ###
 
 ### copy manifest to clipboard
-sub output_route {
+sub route2clipboard {
 	my ($r) = @_;
 	$r =~ m/(.*) -\> (.*)/;
 	my ($from_s, $to_s) = ($1, $2);
@@ -1518,9 +1518,14 @@ sub output_route {
 		if ($Data{$r}{$i}{Ignore}) { next; }
 
 		### separator every N items
-		my $break = 5;
+		my $break = 3;
 		if ((($n_items-1) % $break) == 0 and not $n_items==1) {
-			$text.= "$eol------------";
+			$text.= $eol;
+			$text.= "-----";
+			$text.= " ";
+			$text.= (uc $from_s)." => ".(uc $to_s);
+			$text.= " ";
+			$text.= "-----";
 		}
 
 		$text.= $eol.$eol;
@@ -1651,15 +1656,60 @@ sub import_from_server {
 		
 		foreach my $id (keys %{$kludge{$bid_loc}}) {
 			my $ask_loc = $kludge{$bid_loc}{$id};
-			my $r = &locs2r($ask_loc, $bid_loc);
+			### bid_loc, ask_loc : station longname
+			
+		
+			### check alternate sources
+			foreach my $from_stn (values %Hubs) {
+				if ($from_stn eq $bid_loc) { next; }
+				my $r = &locs2r($from_stn, $bid_loc);
 
+				### import route parameters from evecentral
+				if (! $Data{$r}{$id} ) {
+					$Data{$r}{$id}{From} = $ask_loc;
+					$Data{$r}{$id}{To} = $bid_loc;
+					$Data{$r}{$id}{Route} = $r;
+					$Data{$r}{$id}{Item} = $id;
+					$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
+					$Data{$r}{$id}{Bids} = ();
+					$Data{$r}{$id}{Bids_Reliable} = 0;
+					$Data{$r}{$id}{Bids_Age} = 0;
+					$Data{$r}{$id}{Asks} = ();
+					$Data{$r}{$id}{Asks_Reliable} = 0;
+					$Data{$r}{$id}{Asks_Age} = 0;
+				}
+			}
+
+			### check alternate destinations
+			foreach my $to_stn (values %Hubs) {
+				if ($to_stn eq $ask_loc) { next; }
+				my $r = &locs2r($ask_loc, $to_stn);
+
+				### import route parameters from evecentral
+				if (! $Data{$r}{$id} ) {
+					$Data{$r}{$id}{From} = $ask_loc;
+					$Data{$r}{$id}{To} = $bid_loc;
+					$Data{$r}{$id}{Route} = $r;
+					$Data{$r}{$id}{Item} = $id;
+					$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
+					$Data{$r}{$id}{Bids} = ();
+					$Data{$r}{$id}{Bids_Reliable} = 0;
+					$Data{$r}{$id}{Bids_Age} = 0;
+					$Data{$r}{$id}{Asks} = ();
+					$Data{$r}{$id}{Asks_Reliable} = 0;
+					$Data{$r}{$id}{Asks_Age} = 0;
+				}
+			}
+		
+=begin
 			### import route parameters from evecentral
+			my $r = &locs2r($ask_loc, $bid_loc);
 			if (! $Data{$r}{$id} ) {
 				$Data{$r}{$id}{From} = $ask_loc;
 				$Data{$r}{$id}{To} = $bid_loc;
 				$Data{$r}{$id}{Route} = $r;
 				$Data{$r}{$id}{Item} = $id;
-				$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id}; ### stateful
+				$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
 				$Data{$r}{$id}{Bids} = ();
 				$Data{$r}{$id}{Bids_Reliable} = 0;
 				$Data{$r}{$id}{Bids_Age} = 0;
@@ -1667,8 +1717,9 @@ sub import_from_server {
 				$Data{$r}{$id}{Asks_Reliable} = 0;
 				$Data{$r}{$id}{Asks_Age} = 0;
 			}
+=cut
 
-			### do NOT import orders from evecentral, unless we already have order data 
+			### do NOT import detailed order data from evecentral
 			#if (! $Data{$r}{$id}{Bids}) {
 			#	#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
 			#	$Data{$r}{$id}{Bids} = ();
