@@ -3,13 +3,15 @@
 use 5.010;
 use strict;
 use warnings;
-use LWP::Simple;
-use List::Util qw (shuffle);
-use Time::HiRes qw (gettimeofday);
+
+use DBI;
 use Fcntl qw(:DEFAULT :flock);
 use HTML::FormatText;
 use HTML::Parse;
-use DBI;
+use HTTP::Async;
+use List::Util qw (shuffle);
+use LWP::Simple;
+use Time::HiRes qw (gettimeofday);
 
 
 ### GET query parameters
@@ -571,7 +573,11 @@ sub get_html_orders {
 	return $orders_html;
 }
 
-
+sub get_html_orders2 {
+	my ($from, $to) = @_;
+	my $url_orders = &url_orders($from, $to);
+	my $orders_html= get $url_orders; 
+}
 
 ### sample data from deals page
 #
@@ -1444,6 +1450,9 @@ sub error {
 &import_item_db;
 
 my $last_loop = 0;
+my $time_fetchall = 0;
+my $time_getall = 0;
+my $time_parseall = 0;
 while (1) {
 	### reset market datastore
 	%Bids = ();
@@ -1456,52 +1465,60 @@ while (1) {
 
 	&import_market_db;
 
-	my @cycle = shuffle(@routes);
+
+
+	$time_fetchall = 0;
 	&timer_start("fetchall");
-	my $time_fn_get_html = 0;
-	my $time_fn_parse_orders = 0;
+
+	$time_getall = 0;
+	&timer_start("getall");
+	### get html
+	my $fetch_time = time;
+	my $async = HTTP::Async->new;
+	my @cycle = shuffle(@routes);
 	foreach my $r (@cycle) {
 		my ($from_id, $to_id) = @$r;
-		#print ">>> fetching orders ".&where2s(&loc_i2n($from_id))." => ".&where2s(&loc_i2n($to_id)).":\n";
-		my $fetch_time = time;
-		&randomize_html_args;
-		&timer_start("fn_get_html");
-		my $html_orders = &get_html_orders($from_id, $to_id);
-		$time_fn_get_html += &timer_stop("fn_get_html");
-		&timer_start("fn_parse_orders");
-		if (!$html_orders) { 
-			&error("\$html_orders empty, from=$sys_names{$from_id}, to=$sys_names{$to_id}"); 
-			warn ">>> parse error";
-			next; 
-		}
-		&parse_orders($html_orders, $fetch_time); # populate Bids/Asks[]
-			$time_fn_parse_orders += &timer_stop("fn_parse_orders");
+		my $url = &url_orders($from_id, $to_id);
+		$async->add( HTTP::Request->new( GET => $url ) );
 	}
-	my $time_fetchall = &timer_stop("fetchall");
+	my @html_responses = ();
+	while ( $async->not_empty ) {		my $response = $async->wait_for_next_response();
+		if ($response->is_success) {
+			my $html = $response->content;
+			push(@html_responses, $html);
+		} else {
+			### failed response
+			&error("\$html_orders empty, url=".$response->base); 
+			warn ">>> parse error";			}
+	}	$time_getall = &timer_stop("getall");
+
+
+	### parse html	$time_parseall = 0;
+	&timer_start("parse_all");
+	foreach my $html (@html_responses) {
+		&parse_orders($html, $fetch_time); # populate Bids/Asks[] ###
+	}
+	$time_parseall = &timer_stop("parse_all");
+	
+	$time_fetchall = &timer_stop("fetchall");
+
 
 	&export_market_db;
 
-	### export "eve-shopping-amarr2dodixie.txt" files
+	### populate Cargos[]
 	foreach my $r (@routes) {
 		my ($from_id, $to_id) = @$r;
 		my $loc_from = &loc_i2n($from_id);
 		my $loc_to = &loc_i2n($to_id);
-		#print "\n-- ".&where2s($loc_from)."-".&where2s($loc_to)." --\n";
-		#print ">>> analyzing ".$loc_from." => ".$loc_to."\n";
-
-		#print ">>> match_orders() ".&where2s($loc_from)."-".&where2s($loc_to)."\n";
-		my $deals_ref = &match_orders($loc_from, $loc_to);
+		my $deals_ref = &match_orders($loc_from, $loc_to);
 		if (! $deals_ref) { next; }
-
-		#print ">>> pick_cargo() ".&where2s($loc_from)."-".&where2s($loc_to)."\n";
-		my $take2_ref = &pick_cargo($deals_ref);
-		$Cargos{$loc_from}{$loc_to} = $take2_ref;
-
-		#print ">>> export_shopping() ".&where2s($loc_from)."-".&where2s($loc_to)."\n";
-		&export_shopping_list($take2_ref);
+		my $cargo = &pick_cargo($deals_ref);
+		$Cargos{$loc_from}{$loc_to} = $cargo;
+		&export_shopping_list($cargo);
 	}
 
-	### data for dashboard
+
+	### export Cargos[] to dashboard
 	my $FH;
 	open($FH,'>:crlf', $cargo_filename);
 	flock($FH, LOCK_EX);
@@ -1513,6 +1530,7 @@ while (1) {
 		&export_to_dashboard($FH, $loc_from, $loc_to, $Cargos{$loc_from}{$loc_to});
 	}
 	close($FH);
+
 
 	### debug output
 	print "\n\n";
@@ -1532,16 +1550,13 @@ while (1) {
 	print sprintf("%7i", $n_sort_by_price).	" sorts by price\n";	$n_sort_by_price = 0;
 	print "---\n";
 	print "  ".&timer2s($time_fetchall)." fetch + parse\n";		$time_fetchall = 0;
-	print "  ".&timer2s($time_fn_get_html)." get_html_orders()\n";	$time_fn_get_html = 0;
-	print "  ".&timer2s($time_fn_parse_orders)." parse_orders()\n";	$time_fn_parse_orders= 0;
+	print "  ".&timer2s($time_getall)." get_html_orders()\n";	$time_getall = 0;
+	print "  ".&timer2s($time_parseall)." parse_orders()\n";	$time_parseall= 0;
 	print "  ".&timer2s($time_main)." main parse loop\n";		$time_main = 0;
 	print "  ".&timer2s($time_parse_all)." parsing\n";		$time_parse_all = 0;
 	print sprintf("%6.1f", $time_dup/1000000.0). "s dup checking\n";$time_dup = 0;
 	print sprintf("%6.1f", $time_sort/1000000.0)."s sorting\n";	$time_sort = 0;
 	print sprintf("%6.1f", $time_get/1000000.0). "s GET()\n";	$time_get = 0;
-
-	#my $time_fn_get_html = 0;
-	#my $time_fn_parse_orders = 0;
 
 
 

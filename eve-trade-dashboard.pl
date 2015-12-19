@@ -52,8 +52,8 @@ my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
-	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
-	system("start run-crest.bat"); ## new window, persist after die (DEBUG)
+	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
 	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php > out-crest.txt 2>&1"); ## new window + log
 	exit;
 }
@@ -1516,7 +1516,13 @@ sub output_route {
 	my $n_items = 1;
 	foreach my $i (sort {$Data{$r}{$b}{Profit} <=> $Data{$r}{$a}{Profit}} (keys %{$Data{$r}})) {
 		if ($Data{$r}{$i}{Ignore}) { next; }
-	
+
+		### separator every N items
+		my $break = 5;
+		if ((($n_items-1) % $break) == 0 and not $n_items==1) {
+			$text.= "$eol------------";
+		}
+
 		$text.= $eol.$eol;
 
 		### Item
@@ -1536,7 +1542,7 @@ sub output_route {
 			$ask_qty += $vol;
 			#$text .= "  ask ".&comma($price)." x $vol$eol";
 		}
-		$text.= "  ask ".&comma($ask_hi)." x $ask_qty$eol";
+		$text.= "  ask ".&comma($ask_hi)." x $ask_qty$eol"; ### highest profitable ask price
 
 		#$text.= "  ---$eol";
 
@@ -1551,7 +1557,7 @@ sub output_route {
 			$bid_qty += $vol;
 			#$text .= "  bid ".&comma($price)." x $vol$eol";
 		}
-		$text.= "  bid ".&comma($bid_lo)." x $bid_qty$eol";
+		$text.= "  bid ".&comma($bid_lo)." x $bid_qty$eol"; ### lowest profitable bid price
 	}
 	
 	Clipboard->copy($text);
@@ -1918,6 +1924,7 @@ sub recalc {
 			my $last_ask_rem = 0;
 			my $Eject = 0;
 			
+			### TODO: sort Bids + Asks
 			 
 			### find profitable order matches
 			while (($i_bid < $n_bids) && ($i_ask < $n_asks)) {
@@ -1935,7 +1942,23 @@ sub recalc {
 				my $profit = (($Net_tax * $bid_price) - $ask_price);
 				my $profit_per_vol = $profit / $items_size{$id};
 				if ($profit_per_vol < $minProfitPerSize) {
-					last;
+=begin					
+					if ($i_bid == 0 and $i_ask == 0) {
+						print &time2s." >>> ppv fail $r :: ".$items_name{$id}." (ppv=".$profit_per_vol.")\n";
+						for (my $x = 0; $x < $n_asks; $x++) {
+							my $ask = $Data{$r}{$id}{Asks}[$x];
+							my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
+							print &time2s."     ask ".&comma($ask_price)." x ".&commai($ask_vol)."\n";
+						}
+						print &time2s."     ---\n";
+						for (my $x = 0; $x < $n_bids; $x++) {
+							my $bid = $Data{$r}{$id}{Bids}[$x];
+							my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
+							print &time2s."     bid ".&comma($bid_price)." x ".&commai($bid_vol)."\n";
+						}
+					}
+=cut
+					last; ### skip
 				}
 
 				### carryover remainder qty
@@ -1976,6 +1999,7 @@ sub recalc {
 			### item-level: check total profit
 			### this should catch the scenario of zero matches
 			if ($Data{$r}{$id}{Profit} < $minProfit) {
+				#print &time2s." >>> skipping $r :: ".$items_name{$id}." (profit=".$Data{$r}{$id}{Profit}.")\n";
 				delete $Data{$r}{$id};
 				next;
 			}
@@ -2506,7 +2530,7 @@ sub import_game_file {
 	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
 	my $fileRegName = $+{region};
 	my $fileHubStnFullname = &reg2hub($fileRegName);
-	my $fileItem = ($item_fname2iname{$+{item}}) ? ($item_fname2iname{$+{item}}) : ($+{item});
+	my $fileItem = &item_fname2iname( $+{item} );
 	my $id = $items_id{$fileItem};
 	#$fileTime = &fname2time($fname); ### override system modtime with evetime
 	#print &time2s()." import() ".sprintf("%-13s", "[".$fileReg."]")." $fileItem\n";
@@ -2556,12 +2580,12 @@ sub import_game_file {
 	my @asksSorted = sort {
 		my ($price_a) = split(':', $a);
 		my ($price_b) = split(':', $b);
-		$price_a <=> $price_b;
+		$price_a <=> $price_b; ### lowest first (ascending)
 	} @asks;
 	my @bidsSorted = sort {
 		my ($price_a) = split(':', $a);
 		my ($price_b) = split(':', $b);
-		$price_b <=> $price_a;
+		$price_b <=> $price_a; ### highest first (descending)
 	} @bids;
 
 	### Pass 3: import new data to all relevant Routes
@@ -2580,22 +2604,12 @@ sub import_game_file {
 
 		### check if asks are relevant to this Route
 		if ($fileHubStnFullname eq $startStn) {
-
-			### don't check age, just override data
-			### skip if out-of-date
-			#if ($fileTime + $game_data_expire < $Data{$r}{$id}{Asks_Age}) { next; }
-			#if ($fileTime <= $Data{$r}{$id}{Asks_Age}) { next; }
-
 			$Data{$r}{$id}{Asks} = (); ### wipe current list of asks
 			$Data{$r}{$id}{Asks_Reliable} = 1;
 			$Data{$r}{$id}{Asks_Age} = 0;			
 			foreach my $ask (@asksSorted) { 
-				### don't need to check for dups bc this is a marketlog file
-				#if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
 				push(@{$Data{$r}{$id}{Asks}}, $ask); 
 				$n_asks++; 
-
-				### TODO: need to update age here?
 				my ($price, $vol, $ignore, $when) = split(':', $ask);
 				$Data{$r}{$id}{Asks_Age} = max($Data{$r}{$id}{Asks_Age}, $when); ### most recent order
 			}
@@ -2603,20 +2617,12 @@ sub import_game_file {
 			
 		### check if bids are relevant to this Route
 		} elsif ($fileHubStnFullname eq $endStn) {
-			### skip if out-of-date
-			#if ($fileTime + $game_data_expire < $Data{$r}{$id}{Bids_Age}) { next; }
-			#if ($fileTime <= $Data{$r}{$id}{Bids_Age}) { next; }
-
 			$Data{$r}{$id}{Bids} = (); ### wipe current list of asks
 			$Data{$r}{$id}{Bids_Reliable} = 1;
 			$Data{$r}{$id}{Bids_Age} = 0;
 			foreach my $bid (@bidsSorted) { 
-				### don't need to check for dups bc this is a marketlog file
-				#if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
 				push(@{$Data{$r}{$id}{Bids}}, $bid); 
 				$n_bids++;
-
-				### TODO: need to update age here?
 				my ($price, $vol, $ignore, $when) = split(':', $bid);
 				$Data{$r}{$id}{Bids_Age} = max($Data{$r}{$id}{Bids_Age}, $when); ### most recent order
 			}
@@ -2628,6 +2634,25 @@ sub import_game_file {
 
 	close $FH;
 	#print "game data: $items_name{$id} ".sprintf("%11s", "\[$fileReg\]")." - $n_asks asks, $n_bids bids\n";
+}
+
+sub item_fname2iname {
+	my ($item) = @_;
+	if (! $items_id{$item} ) {
+		if ( $item_fname2iname{$item} ) { 
+			$item = $item_fname2iname{$item};
+		} elsif ( $items_id{ $item =~ s/_/:/r } ) {
+			$item =~ s/_/:/;
+			#print &time2s()." import_from_game(): colon substitution, item=$item\n";
+		} elsif ( $items_id{ $item =~ s/_/\//r } ) {
+			$item =~ s/_/\//;
+			#print &time2s()." import_from_game(): slash substitution, item=$item\n";
+		} else {
+			print &time2s()." import_from_game(): unknown item, item=$item\n";
+			next;
+		}
+	}	
+	return $item;
 }
 
 my %lastImports = ();
@@ -2652,12 +2677,7 @@ sub import_from_game {
 			my $fname_full = $dirname.'\\'.$fname;
 			#if ( $empty_game_files{$fname2} ) { next; }
 			my $reg = $+{region};
-			my $item = $+{item};
-			if ( $item_fname2iname{$item} ) { $item = $item_fname2iname{$item}; }
-			if (! $items_id{$item} ) {
-				print &time2s()." import_from_game(): unknown item, file $fname\n";
-				next;
-			}
+			my $item = &item_fname2iname( $+{item} );
 			my $id = $items_id{$item};
 			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$modtime,$ctime,$blksize,$blocks) = stat($fname_full);
 			
@@ -2762,8 +2782,8 @@ sub refresh_server_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
 	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
 	if ($mtime and ($mtime > $last_update_server)) {
-		&import_from_server();
 		#$Redraw ||= &import_from_server();
+		&import_from_server();
 		&export_crest_reqs(); ### request crest data for new items
 
 		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");

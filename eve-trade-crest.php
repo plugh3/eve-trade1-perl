@@ -93,12 +93,18 @@ function set_remove(array &$set, $id) {
     }
 }
 
-$last = 0;          // time of last import (of crest requests)
+
+
+
+// main()
+
+$last = 0;          // time of last import (of crest request file)
 $last2 = array();   // time of last export, by filename
 $last_empty = 0;
 while (1)
 {
-    $fnameReqs = __DIR__.'/'.'eve-trade-crest-reqs.txt';
+    $fnameReqsShort = 'eve-trade-crest-reqs.txt';
+    $fnameReqs = __DIR__.'/'.$fnameReqsShort;
     // check if request file updated
     clearstatcache();
     $mtime = filemtime($fnameReqs);
@@ -258,9 +264,10 @@ function getExportFilename($row)
     $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
+    $fname_item = str_replace("/", "_", $fname_item); // hacky
+    $fname_item = str_replace(":", "_", $fname_item); // hacky
 
     $fname2 = $export_prefix.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
-    $fname2 = str_replace("/", "_", $fname2); // hacky
     return $fname2;        
 }
 function export($fname, $text)
