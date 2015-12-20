@@ -38,9 +38,10 @@ my $age_expire = 3*24*60*60; ### 72 hours
 
 # to/from systems
 my %is_region = ();
-my $sys_amarr = 30002187;
-my $sys_jita = 30000142;
+my $sys_amarr =   30002187;
+my $sys_jita =    30000142;
 my $sys_dodixie = 30002659;
+my $sys_rens =    30002510;
 my $reg_providence = 10000047; $is_region{$reg_providence} = 1;
 my $reg_lonetrek = 10000016; $is_region{$reg_lonetrek} = 1;
 my $reg_pureblind = 10000023; $is_region{$reg_pureblind} = 1;
@@ -49,6 +50,7 @@ my %sys_names = (
 	$sys_amarr => "Amarr",
 	$sys_jita => "Jita",
 	$sys_dodixie => "Dodixie",
+	$sys_rens => "Rens",
 	$reg_providence => "Providence",	
 	$reg_lonetrek => "Lonetrek",
 	$reg_pureblind => "Pure Blind",
@@ -58,6 +60,7 @@ my %primary_stations = (
 	"Jita" => "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
 	"Amarr" => "Amarr VIII (Oris) - Emperor Family Academy",
 	"Dodixie" => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
+	"Rens" => "Rens VI - Moon 8 - Brutor Tribe Treasury",
 );
 
 
@@ -256,152 +259,7 @@ sub export_market_db {
 
 
 my $n_imports = 0; # itemDB imports
-my %baddata_size = (
-	"Daredevil" => "2500.0",
-	"Datacore - Amarrian Starship Engineering" => "0.1",
-	"Datacore - Caldari Starship Engineering" => "0.1",
-	"Datacore - Defensive Subsystems Engineering" => "0.1",
-	"Datacore - Electromagnetic Physics" => "0.1",
-	"Datacore - Electronic Engineering" => "0.1",
-	"Datacore - Electronic Subsystems Engineering" => "0.1",
-	"Datacore - Engineering Subsystems Engineering" => "0.1",
-	"Datacore - Gallentean Starship Engineering" => "0.1",
-	"Datacore - Graviton Physics" => "0.1",
-	"Datacore - High Energy Physics" => "0.1",
-	"Datacore - Hydromagnetic Physics" => "0.1",
-	"Datacore - Laser Physics" => "0.1",
-	"Datacore - Mechanical Engineering" => "0.1",
-	"Datacore - Minmatar Starship Engineering" => "0.1",
-	"Datacore - Molecular Engineering" => "0.1",
-	"Datacore - Nanite Engineering" => "0.1",
-	"Datacore - Nuclear Physics" => "0.1",
-	"Datacore - Offensive Subsystems Engineering" => "0.1",
-	"Datacore - Plasma Physics" => "0.1",
-	"Datacore - Propulsion Subsystems Engineering" => "0.1",
-	"Datacore - Quantum Physics" => "0.1",
-	"Datacore - Rocket Science" => "0.1",
-	"Drone Link Augmentor II" => "25.0",
-	"F-90 Positional Sensor Subroutines" => "5.0",
-	"Gecko" => "50.0",
-	"Large Capacitor Control Circuit I" => "20.0",
-	"Legion Defensive - Adaptive Augmenter" => "40.0",
-	"Legion Defensive - Augmented Plating" => "40.0",
-	"Legion Defensive - Nanobot Injecter" => "40.0",
-	"Legion Defensive - Warfare Processor" => "40.0",
-	"Legion Electronics - Energy Parasitic Complex" => "40.0",
-	"Legion Electronics - Dissolution Sequencer" => "40.0",
-	"Legion Electronics - Emergent Locus Analyzer" => "40.0",
-	"Legion Electronics - Tactical Targeting Network" => "40.0",
-	"Legion Engineering - Power Core Multiplier" => "40.0",
-	"Legion Engineering - Augmented Capacitor Reservoir" => "40.0",
-	"Legion Engineering - Capacitor Regeneration Matrix" => "40.0",
-	"Legion Engineering - Supplemental Coolant Injector" => "40.0",
-	"Legion Offensive - Drone Synthesis Projector" => "40.0",
-	"Legion Offensive - Assault Optimization" => "40.0",
-	"Legion Offensive - Covert Reconfiguration" => "40.0",
-	"Legion Offensive - Liquid Crystal Magnifiers" => "40.0",
-	"Legion Propulsion - Chassis Optimization" => "40.0",
-	"Legion Propulsion - Fuel Catalyst" => "40.0",
-	"Legion Propulsion - Interdiction Nullifier" => "40.0",
-	"Legion Propulsion - Wake Limiter" => "40.0",
-	"Loki Defensive - Adaptive Augmenter" => "40.0",
-	"Loki Defensive - Adaptive Shielding" => "40.0",
-	"Loki Defensive - Amplification Node" => "40.0",
-	"Loki Defensive - Warfare Processor" => "40.0",
-	"Loki Electronics - Dissolution Sequencer" => "40.0",
-	"Loki Electronics - Emergent Locus Analyzer" => "40.0",
-	"Loki Electronics - Immobility Drivers" => "40.0",
-	"Loki Electronics - Tactical Targeting Network" => "40.0",
-	"Loki Engineering - Augmented Capacitor Reservoir" => "40.0",
-	"Loki Engineering - Capacitor Regeneration Matrix" => "40.0",
-	"Loki Engineering - Power Core Multiplier" => "40.0",
-	"Loki Engineering - Supplemental Coolant Injector" => "40.0",
-	"Loki Offensive - Covert Reconfiguration" => "40.0",
-	"Loki Offensive - Hardpoint Efficiency Configuration" => "40.0",
-	"Loki Offensive - Projectile Scoping Array" => "40.0",
-	"Loki Offensive - Turret Concurrence Registry" => "40.0",
-	"Loki Propulsion - Chassis Optimization" => "40.0",
-	"Loki Propulsion - Fuel Catalyst" => "40.0",
-	"Loki Propulsion - Intercalated Nanofibers" => "40.0",
-	"Loki Propulsion - Interdiction Nullifier" => "40.0",
-	"Medium Ancillary Current Router I" => "10.0",
-	"Medium Ancillary Current Router II" => "10.0",
-	"Medium Anti-EM Screen Reinforcer I"  => "10.0",
-	"Medium Anti-EM Screen Reinforcer II" => "10.0",
-	"Medium Anti-Explosive Screen Reinforcer I" => "10.0",
-	"Medium Anti-Explosive Screen Reinforcer II" => "10.0",
-	"Medium Anti-Kinetic Screen Reinforcer I" => "10.0",
-	"Medium Anti-Kinetic Screen Reinforcer II" => "10.0",
-	"Medium Anti-Thermal Screen Reinforcer I" => "10.0",
-	"Medium Anti-Thermal Screen Reinforcer II" => "10.0",
-	"Medium Anti-EM Pump I" => "10.0",
-	"Medium Anti-EM Pump II" => "10.0",
-	"Medium Anti-Explosive Pump I" => "10.0",
-	"Medium Anti-Explosive Pump II" => "10.0",
-	"Medium Anti-Kinetic Pump I" => "10.0",
-	"Medium Anti-Kinetic Pump II" => "10.0",
-	"Medium Anti-Thermal Pump I" => "10.0",
-	"Medium Anti-Thermal Pump II" => "10.0",
-	"Medium Capacitor Control Circuit I" => "10.0",
-	"Medium Core Defense Field Extender I" => "10.0",
-	"Small Anti-EM Screen Reinforcer I" => "5.0",
-	"Small Anti-EM Screen Reinforcer II" => "5.0",
-	"Small Anti-Explosive Screen Reinforcer I" => "5.0",
-	"Small Anti-Explosive Screen Reinforcer II" => "5.0",
-	"Small Anti-Kinetic Screen Reinforcer I" => "5.0",
-	"Small Anti-Kinetic Screen Reinforcer II" => "5.0",
-	"Small Anti-Thermic Screen Reinforcer I" => "5.0",
-	"Small Anti-Thermic Screen Reinforcer II" => "5.0",
-	"Small Anti-EM Pump I" => "5.0",
-	"Small Anti-EM Pump II" => "5.0",
-	"Small Anti-Explosive Pump I" => "5.0",
-	"Small Anti-Explosive Pump II" => "5.0",
-	"Small Anti-Kinetic Pump I" => "5.0",
-	"Small Anti-Kinetic Pump II" => "5.0",
-	"Small Anti-Thermic Pump I" => "5.0",
-	"Small Anti-Thermic Pump II" => "5.0",
-	"Proteus Defensive - Adaptive Augmenter" => "40.0",
-	"Proteus Defensive - Augmented Plating" => "40.0",
-	"Proteus Defensive - Nanobot Injector" => "40.0",
-	"Proteus Defensive - Warfare Processor" => "40.0",
-	"Proteus Electronics - CPU Efficiency Gate" => "40.0",
-	"Proteus Electronics - Dissolution Sequencer" => "40.0",
-	"Proteus Electronics - Emergent Locus Analyzer" => "40.0",
-	"Proteus Electronics - Friction Extension Processor" => "40.0",
-	"Proteus Engineering - Augmented Capacitor Reservoir" => "40.0",
-	"Proteus Engineering - Capacitor Regeneration Matrix" => "40.0",
-	"Proteus Engineering - Power Core Multiplier" => "40.0",
-	"Proteus Engineering - Supplemental Coolant Injector" => "40.0",
-	"Proteus Offensive - Covert Reconfiguration" => "40.0",
-	"Proteus Offensive - Dissonic Encoding Platform" => "40.0",
-	"Proteus Offensive - Drone Synthesis Projector" => "40.0",
-	"Proteus Offensive - Hybrid Propulsion Armature" => "40.0",
-	"Proteus Propulsion - Gravitational Capacitor" => "40.0",
-	"Proteus Propulsion - Interdiction Nullifier" => "40.0",
-	"Proteus Propulsion - Localized Injectors" => "40.0",
-	"Proteus Propulsion - Wake Limiter" => "40.0",
-	"Tengu Defensive - Adaptive Shielding" => "40.0",
-	"Tengu Defensive - Amplification Node" => "40.0",
-	"Tengu Defensive - Supplemental Screening" => "40.0",
-	"Tengu Defensive - Warfare Processor" => "40.0",
-	"Tengu Electronics - CPU Efficiency Gate" => "40.0",
-	"Tengu Electronics - Dissolution Sequencer" => "40.0",
-	"Tengu Electronics - Emergent Locus Analyzer" => "40.0",
-	"Tengu Electronics - Obfuscation Manifold" => "40.0",
-	"Tengu Engineering - Augmented Capacitor Reservoir" => "40.0",
-	"Tengu Engineering - Capacitor Regeneration Matrix" => "40.0",
-	"Tengu Engineering - Power Core Multiplier" => "40.0",
-	"Tengu Engineering - Supplemental Coolant Injector" => "40.0",
-	"Tengu Offensive - Accelerated Ejection Bay" => "40.0",
-	"Tengu Offensive - Covert Reconfiguration" => "40.0",
-	"Tengu Offensive - Magnetic Infusion Basin" => "40.0",
-	"Tengu Offensive - Rifling Launcher Pattern" => "40.0",
-	"Tengu Propulsion - Fuel Catalyst" => "40.0",
-	"Tengu Propulsion - Gravitational Capacitor" => "40.0",
-	"Tengu Propulsion - Intercalated Nanofibers" => "40.0",
-	"Tengu Propulsion - Interdiction Nullifier" => "40.0",
-	"Worm" => "2500.0",
-);
+
 sub import_item_db {
 	my $username = "dev";
 	my $password = "BNxJYjXbYXQHAvFM";
@@ -470,9 +328,6 @@ sub get_item_info {
 	#if ($itemPage =~ /(Item.*)size: (?<itemSize>[0-9]+\.?[0-9]*) m\<sup\>3\<\/sup\>/) {
 		my $size = $+{itemSize};
 		
-		### known data errors
-		if ($baddata_size{$id}) { $size = $baddata_size{$id}; };
-
 		### add new item record
 		$itemDB{$id} = join('~',$name,$id,$size);
 		$items_name{$id} = $name;
@@ -1414,11 +1269,17 @@ sub where2s {
 
 my @routes = (
 	[$sys_jita, $sys_amarr],
-	[$sys_amarr, $sys_jita],
 	[$sys_jita, $sys_dodixie],
-	[$sys_dodixie, $sys_jita],
+	[$sys_jita, $sys_rens],
+	[$sys_amarr, $sys_jita],
 	[$sys_amarr, $sys_dodixie],
+	[$sys_amarr, $sys_rens],
+	[$sys_dodixie, $sys_jita],
 	[$sys_dodixie, $sys_amarr],
+	[$sys_dodixie, $sys_rens],
+	[$sys_rens, $sys_jita],
+	[$sys_rens, $sys_amarr],
+	[$sys_rens, $sys_dodixie],
 );
 my %Cargos = ();
 

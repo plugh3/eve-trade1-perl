@@ -52,9 +52,9 @@ my $pid_crest = fork;
 if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
-	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
-	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
 	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php > out-crest.txt 2>&1"); ## new window + log
+	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
+	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
 	exit;
 }
 $pid_crest = substr($pid_crest, 1);
@@ -113,6 +113,7 @@ $mw->geometry("850x650");
 my $Pre = ' ';
 my $Post = ' ';
 my $Sep = '~'; ### separator used for pathnames (route/item/bid)
+my $RouteSep = " -> ";
 my $font = 		'evesans 10';
 my $font_bold =		'evesans 10 bold';
 my $font_big =		'evesans 12';
@@ -120,11 +121,13 @@ my $font_menu = 	'evesans 8';
 my $colwidth_item = 	40;
 my $color_fg =		'#dddddd';
 my $color_top = 	$color_fg;
-my $color_bg =  	'#242424';
 my $color_ig =		'#777777';
 my $color_hdr =		'#181818';
 #my $color_bgselect = 	'#4a6e65';
+my $color_bg =  	'#242424';
 my $color_bgselect = 	'#283e50';
+#my $color_bgalt =	'#252a3f'; # color_bg..x......color_bgselect
+my $color_bgalt =	'#3f2a3f'; # color_bg..x......color_bgselect
 my $color_fgselect =	$color_fg;
 my $color_menubg =	'#121212';
 my $color_menuselect =	'#121224';
@@ -162,6 +165,8 @@ my $col_age =    6;
 my $col_pps =	 7;
 
 
+
+
 ### Tree widget: route cargo lists
 my $w1 = $f_top->Scrolled('Tree', -scrollbars => 'e',
 	-columns => $nCols,
@@ -170,11 +175,65 @@ my $w1 = $f_top->Scrolled('Tree', -scrollbars => 'e',
 	-font => $font,
 	-foreground => $color_fg,
 	-background => $color_bg,
+	-browsecmd => \&highlight_return_route_cmd,
 #	-selectforeground => $color_fgselect,
 	-selectbackground => $color_bgselect,
 	-separator => $Sep,
 	-height => 35,
 )->pack(-fill => 'both', -expand => 1);
+
+
+my $p_lastAltHighlight = 0;
+my @styles_lastAlt = ();
+sub highlight_return_route_clear {
+	### restore previous row
+	if ($p_lastAltHighlight) {
+		for (my $col = 0; $col < $nCols; $col++) {
+			my $style_orig = $styles_lastAlt[$col];
+			if (! $style_orig) { next; } 
+			$w1->itemConfigure($p_lastAltHighlight, $col, '-style', $style_orig);
+		}
+	}
+	$p_lastAltHighlight = 0;
+	@styles_lastAlt = ();
+}
+sub highlight_return_route_cmd {
+	my ($p_selected) = @_;
+	
+	if (! &is_route($p_selected)) { return; }
+	
+	### construct string for return route
+	my ($from, $to) = split($RouteSep, $p_selected);
+	my $p_return = join($RouteSep, $to, $from);
+	#print &time2s()." highlight_return_route($p_return)\n";
+
+	if ($p_return eq $p_lastAltHighlight) { return; }
+	
+	### restore previous row
+	&highlight_return_route_clear();
+
+	### save old style + set new style 
+	$p_lastAltHighlight = $p_return;
+	@styles_lastAlt = ();
+	for (my $col = 0; $col < $nCols; $col++) {
+		### skip incompatible cell types
+		if (not $w1->itemExists($p_return, $col)) { next; }
+		my $itemtype = $w1->itemCget($p_return, $col, '-itemtype');
+		if ($itemtype eq 'window' or $itemtype eq 'image') { next; }
+
+		### save old style
+		my $style_orig = $w1->itemCget($p_return, $col, '-style');
+		$styles_lastAlt[$col] = $style_orig;
+
+		### create new style
+		my $style_mod  = &mod_style($style_orig, $itemtype, '-background', $color_bgalt);
+
+		### publish new style
+		$w1->itemConfigure($p_return, $col, '-style', $style_mod);
+	}
+
+}
+
 
 ### Text widget: notifications
 my $w_notify = $f_bot->Scrolled('Text', -scrollbars => 'e', 
@@ -509,21 +568,16 @@ my $style_indic2 = $w1->ItemStyle('image',
 	-activebackground => $color_fg,  	# Y
 );
 
-my %Styles = (); ### existing styles, key = joined list of fields, value = style ref
 sub pick_color {
 	my ($p_item, $x) = @_;
 	if (&is_item($p_item) && ! $x) { 
 		my ($r, $i) = split($Sep, $p_item);
 		if ($Data{$r}{$i}{Ignore}) { 
 			change_color($p_item, $color_ig);
-		} elsif ($Data{$r}{$i}{Asks_Reliable} && $Data{$r}{$i}{Bids_Reliable} ) { 
-			change_color($p_item, $color_green);
-		} elsif ($Data{$r}{$i}{Asks_Reliable} || $Data{$r}{$i}{Bids_Reliable}) { 
-			change_color($p_item, $color_yellow);
 		} elsif ($p_item eq $p_cycle) {
 			change_color($p_item, $color_brightred);
 		} else {
-			change_color($p_item, $color_red);
+			change_color($p_item, $color_green);
 		}
 	} elsif (&is_item($p_item) && $x) {
 		### p[x] => set [x] to match [0]
@@ -533,45 +587,98 @@ sub pick_color {
 		&change_color_cell($p_item, $x, $color);
 	}	
 }
+
+
+### Styles{} cache
+### key = joined list of style fields
+### val = style ref
+my %Styles = (); 
+sub get_style {
+	my (%style_as_hsh, $itemtype) = @_;
+	
+	### styleID = serialized style field values
+	my @style_as_ary = ();
+	foreach my $key (@fields_style) {
+		my $val = $style_as_hsh{$key};
+		push(@style_as_ary, ($key, $val));
+	}
+	my $style_as_id = join(':', @style_as_ary);
+
+	my $style2 = $Styles{$style_as_id};
+	if (! $style2) {
+		$style2 = $mw->ItemStyle($itemtype, (@style_as_ary));
+		$Styles{$style_as_id} = $style2;
+		print ">>> mod_style() new >[$itemtype]$style_as_id<\n";
+		print "    -itemtype => $itemtype\n";
+		foreach my $key (@fields_style) { print "    $key => $style_as_hsh{$key}\n"; }
+	} else {
+		#print ">>> mod_style() dup\n";
+	}
+
+	return $style2;
+}
 sub mod_style {
-	my ($styleref1, $opt1, $val1) = @_;
+	my ($style1, $itemtype, $opt1, $val1, $opt2, $val2) = @_;
 
-	my %vals_h = ();
+	### convert existing style to hash
+	my %style_as_hsh = ();
 	foreach my $field (@fields_style) {
-		my $x = $styleref1->cget($field);
-		if ($x) { $vals_h{$field} = $x; }
-		#print ">>> $field => $vals_h{$field}\n";
+		$style_as_hsh{$field} = $style1->cget($field);
 	}
 	
-	### overwrite new value
-	$vals_h{$opt1} = $val1;
+	### overwrite new value(s)
+	$style_as_hsh{$opt1} = $val1;
+	if ($opt2) { $style_as_hsh{$opt2} = $val2; }
 
-	### serialize
-	my @vals_a = ();
-	foreach my $key (keys (@vals_a)) {
-		my $val = $vals_h{$key};
-		push(@vals_a, ($key, $val));
+	### styleID = serialized style field values
+	my @style_as_ary = ();
+	foreach my $key (@fields_style) {
+		my $val = $style_as_hsh{$key};
+		push(@style_as_ary, ($key, $val));
 	}
-	my $styleid = join(':', @vals_a);
-	
-	### get modified style ref
-	my $styleref2 = $Styles{$styleid};
-	if (! $styleref2) {
-		$styleref2 = $mw->ItemStyle('text', (@vals_a));
-		$Styles{$styleid} = $styleref2;
+	my $style_as_id = join(':', @style_as_ary);
+
+	### get modified style (cached)
+	my $style2 = $Styles{$style_as_id};
+	if (! $style2) {
+		$style2 = $mw->ItemStyle($itemtype, (@style_as_ary));
+		$Styles{$style_as_id} = $style2;
+		print ">>> mod_style() new\n[$itemtype]$style_as_id<\n";
+		#print "    -itemtype => $itemtype\n";
+		#foreach my $key (@fields_style) { print "    $key => $style_as_hsh{$key}\n"; }
+	} else {
+		#print ">>> mod_style() dup\n";
 	}
 
-	return $styleref2;
+	return $style2;
+
+
+	#return &get_style(\%style_as_hsh, $itemtype);
 }
 
-
 sub change_color_cell {
+	my ($p, $x, $color) = @_;
+	if (! $w1->itemExists($p, $x)) { return; }
+	
+	### get current style ref
+	my $styleref1 = $w1->itemCget($p, ($x ? $x : 0), '-style');
+	my $itemtype = $w1->itemCget($p, ($x ? $x : 0), '-itemtype');
+
+	### create modified style
+	my $styleref2 = &mod_style($styleref1, $itemtype, "-foreground", $color, "-activeforeground", $color);
+
+	### apply modified style
+	$w1->itemConfigure($p, $x, '-style', $styleref2);
+}
+
+sub change_color_cell2 {
 	my ($p, $x, $color) = @_;
 	#if (! &is_item($p)) { return; }
 	if (! $w1->itemExists($p, $x)) { return; }
 	
 	### get current style ref
 	my $styleref1 = $w1->itemCget($p, ($x ? $x : 0), '-style');
+	my $itemtype = $w1->itemCget($p, ($x ? $x : 0), '-itemtype');
 
 	my %vals_h = ();
 	foreach my $field (@fields_style) {
@@ -598,7 +705,7 @@ sub change_color_cell {
 		$Styles{$styleid} = $styleref2;
 	}
 
-	#my $styleref2 = &mod_style($styleref1, -foreground => $color, -activeforeground => $color);
+	#my $styleref2 = &mod_style($styleref1, $itemtype, -foreground => $color, -activeforeground => $color);
 
 	### apply modified style
 	#print ">>> change_color() $p, col $x, color $color\n";
@@ -1150,27 +1257,46 @@ sub get_my_path {
 ### default display order
 my @Routes = (
 	"Jita -> Amarr",
-	"Amarr -> Jita",
 	"Jita -> Dodixie",
-	"Dodixie -> Jita",
+	"Jita -> Rens",
+	"Amarr -> Jita",
 	"Amarr -> Dodixie",
+	"Amarr -> Rens",
+	"Dodixie -> Jita",
 	"Dodixie -> Amarr",
+	"Dodixie -> Rens",
+	"Rens -> Jita",
+	"Rens -> Amarr",
+	"Rens -> Dodixie",
 );
 my %is_region = ();
-my $sys_amarr = 30002187;
-my $sys_jita = 30000142;
-my $sys_dodixie = 30002659;
 my $reg_providence = 10000047; $is_region{$reg_providence} = 1;
-my $reg_lonetrek = 10000016; $is_region{$reg_lonetrek} = 1;
-my $reg_pureblind = 10000023; $is_region{$reg_pureblind} = 1;
-my $reg_thespire = 10000018; $is_region{$reg_thespire} = 1;
-my $stn_amarr = 60008494;
-my $stn_jita = 60003760;
+my $reg_lonetrek =   10000016; $is_region{$reg_lonetrek} = 1;
+my $reg_pureblind =  10000023; $is_region{$reg_pureblind} = 1;
+my $reg_thespire =   10000018; $is_region{$reg_thespire} = 1;
+
+
+
+
+
+my $reg_domain     = 10000043;
+my $reg_theforge   = 10000002;
+my $reg_sinqlaison = 10000032;
+my $reg_heimatar =   10000030;
+
+my $sys_amarr =   30002187;
+my $sys_jita =    30000142;
+my $sys_dodixie = 30002659;
+my $sys_rens =    30002510;
+my $stn_amarr =   60008494;
+my $stn_jita = 	  60003760;
 my $stn_dodixie = 60011866;
+my $stn_rens =    60004588;
 my %Hubs = (
 	$stn_jita => "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
 	$stn_amarr => "Amarr VIII (Oris) - Emperor Family Academy",
 	$stn_dodixie => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
+	$stn_rens => "Rens VI - Moon 8 - Brutor Tribe Treasury",
 );
 
 my %stn2sys = (
@@ -1199,6 +1325,7 @@ my %sys_names = (
 	$sys_amarr => "Amarr",
 	$sys_jita => "Jita",
 	$sys_dodixie => "Dodixie",
+	$sys_rens => "Rens",
 	$reg_providence => "Providence",	
 	$reg_lonetrek => "Lonetrek",
 	$reg_pureblind => "Pure Blind",
@@ -1208,22 +1335,41 @@ my %sys2reg = (
 	'Amarr' => 'Domain',
 	'Jita' => 'The Forge',
 	'Dodixie' => 'Sinq Laison',
+	'Rens' => 'Heimatar',
 );
 my %primary_stations = (
 	"Jita" => "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
 	"Amarr" => "Amarr VIII (Oris) - Emperor Family Academy",
 	"Dodixie" => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
+	"Rens" => "Rens VI - Moon 8 - Brutor Tribe Treasury",
+
 );
 my %stn2reg = (
 	"Jita IV - Moon 4 - Caldari Navy Assembly Plant" => 'The Forge',
 	"Amarr VIII (Oris) - Emperor Family Academy" => 'Domain',
 	"Dodixie IX - Moon 20 - Federation Navy Assembly Plant" => 'Sinq Laison',
+	"Rens VI - Moon 8 - Brutor Tribe Treasury" => 'Heimatar',
+
 );
 my %_hub2sys = (
 	"Jita IV - Moon 4 - Caldari Navy Assembly Plant" => $sys_jita,
 	"Amarr VIII (Oris) - Emperor Family Academy" => $sys_amarr,
 	"Dodixie IX - Moon 20 - Federation Navy Assembly Plant" => $sys_dodixie,
+	"Rens VI - Moon 8 - Brutor Tribe Treasury" => $sys_rens,
 );
+my %reg_n2i = (
+	'Domain'      	=> $reg_domain,
+	'The Forge'   	=> $reg_theforge,
+	'Sinq Laison' 	=> $reg_sinqlaison,
+	'Heimatar' 	=> $reg_heimatar,
+);
+my %reg_i2n = (
+	$reg_domain 	=> 'Domain',
+	$reg_theforge	=> 'The Forge',
+	$reg_sinqlaison => 'Sinq Laison',
+	$reg_heimatar 	=> 'Heimatar',
+);
+
 sub hub2sys {
 	my ($hubStnFullName) = @_;
 	my $hubSysID = $_hub2sys{$hubStnFullName};
@@ -2143,18 +2289,10 @@ sub color_item {
 	### unconfirmed -> red
 	if ($Data{$r}{$i}{Ignore}) { 
 		change_color($p_item, $color_ig);
-	} elsif ( ( $Data{$r}{$i}{Asks_Reliable} && (time - $Data{$r}{$i}{Asks_Age}) < $game_data_expire ) &&
-		  ( $Data{$r}{$i}{Bids_Reliable} && (time - $Data{$r}{$i}{Bids_Age}) < $game_data_expire ) ) 
-	{ 
-		change_color($p_item, $color_green);
-	} elsif ( ( $Data{$r}{$i}{Asks_Reliable} && (time - $Data{$r}{$i}{Asks_Age}) < $game_data_expire ) ||
-		  ( $Data{$r}{$i}{Bids_Reliable} && (time - $Data{$r}{$i}{Bids_Age}) < $game_data_expire ) ) 
-	{ 
-		change_color($p_item, $color_yellow);
 	} elsif ($p_item eq $p_cycle) {
 		change_color($p_item, $color_brightred);
 	} else {
-		change_color($p_item, $color_red);
+		change_color($p_item, $color_green);
 	}
 }
 
@@ -2238,15 +2376,20 @@ sub repop {
 		#$w1->itemCreate($p_route, $col_profit, -text => $Pre.'+'.&iski2s($Totals{$r}{Profit}).$Post, @opts_top_r); 
 		$w1->itemCreate($p_route, $col_profit, -text => $Pre.&iski2s($Totals{$r}{Profit}).$Post, @opts_top_r); 
 		$w1->itemCreate($p_route, $col_cost, -text => $Pre.'-'.&iski2s($Totals{$r}{Cost}).$Post, @opts_top_r); 
-		$w1->itemCreate($p_route, $col_age, -text => $Pre.($Totals{$r}{Age} ? &age2s($Totals{$r}{Age}) : "---").$Post, @opts_top_r); 
 		$w1->itemCreate($p_route, $col_size, -text => $Pre.&commai(int($Totals{$r}{Size}))." m3".$Post, @opts_top_r); 
+		$w1->itemCreate($p_route, $col_age, -text => $Pre.($Totals{$r}{Age} ? &age2s($Totals{$r}{Age}) : "---").$Post, @opts_top_r); 
 
-		### Scenario 0: grey out zero profit
+		$w1->itemCreate($p_route, $col_qty, -text => " ", @opts_top_r); 
+		$w1->itemCreate($p_route, $col_roi, -text => " ", @opts_top_r); 
+		$w1->itemCreate($p_route, $col_pps, -text => " ", @opts_top_r); 
+
+		### Filter 1: grey out zero profit
 		if ($Totals{$r}{Profit} == 0) {
 			&change_color($p_route, $color_ig);
 		}
 
-		### Scenario 1: show route Volume (m3) as progress bar
+=begin
+		### Filter 2: show route Volume (m3) as progress bar
 		my $size_pct = ($Totals{$r}{Size} / 8967.0) * 100.0;
 		my $wpb1 = $w1->ProgressBar(
 			-anchor => 'w',
@@ -2261,8 +2404,9 @@ sub repop {
 		my $pbstyle = $w1->ItemStyle('window', -anchor => 'n', '-padx' => 2, '-pady' => 3);
 		$w1->itemConfigure($p_route, $col_size, '-style' => $pbstyle);
 		$w1->columnWidth($col_size, -char => 10); ### this works
+=cut
 
-		### Scenario 2: change Cost to red if over threshold
+		### Filter 3: change Cost to red if over threshold
 		if ($Totals{$r}{Cost} > $total_cost_threshold) { 
 			&change_color_cell($p_route, $col_cost, $color_red); 
 		}
@@ -2369,7 +2513,10 @@ sub repop {
 
 	$w1->add('TOTAL', -text => 'ALL ROUTES', @opts_top_r);
 	$w1->itemCreate('TOTAL', $col_profit, -text => $Pre.'+'.&isk2s($GrandTotal).$Post, @opts_top_r); 
-	&underline_cell('Dodixie -> Amarr', $col_profit);
+	
+	### underline last route for grand total
+	my $r_last = $Routes[-1];
+	&underline_cell($r_last, $col_profit);
 
 	#print "repop() exit\n";
 }
@@ -2403,10 +2550,14 @@ sub opencmd_fn {
 		my $p_route = $p;
 		$w->itemDelete($p_route, $col_profit);
 		$w->itemDelete($p_route, $col_cost);
-		#$w->itemDelete($p_route, $col_size);
+		$w->itemDelete($p_route, $col_size);
 		$w->itemDelete($p_route, $col_age);
+		$w->itemDelete($p_route, $col_qty);
+		$w->itemDelete($p_route, $col_roi);
+		$w->itemDelete($p_route, $col_pps);
 		$w->selectionClear();
 		$w->selectionSet($p_route.$Sep."TOTAL");
+		&highlight_return_route_clear();
 	} elsif (&is_item($p)) {
 		### Scenario 2: only show item quantity when bid/ask orders are visible
 		my $p_item = $p;
@@ -2434,9 +2585,12 @@ sub closecmd_fn {
 		my $r = $p_route;
 		$w->itemCreate($p_route, $col_profit, -text => $Pre.&iski2s($Totals{$r}{Profit}).$Post, @opts_top_r); 
 		$w->itemCreate($p_route, $col_cost, -text => $Pre.'-'.&iski2s($Totals{$r}{Cost}).$Post, @opts_top_r); 
-		#$w->itemCreate($p_route, $col_size, -text => $Pre.&commai(int($Totals{$r}{Size}))." m3".$Post, @opts_top_r); 
+		$w->itemCreate($p_route, $col_size, -text => $Pre.&commai(int($Totals{$r}{Size}))." m3".$Post, @opts_top_r); 
 		$w->itemCreate($p_route, $col_age, -text => $Pre.($Totals{$r}{Age} ? &age2s($Totals{$r}{Age}) : "---").$Post, @opts_top_r); 
-		if ($p eq 'Dodixie -> Amarr') { &underline_cell('Dodixie -> Amarr', $col_profit); }
+		$w->itemCreate($p_route, $col_qty, -text => " ", @opts_top_r); 
+		$w->itemCreate($p_route, $col_roi, -text => " ", @opts_top_r); 
+		$w->itemCreate($p_route, $col_pps, -text => " ", @opts_top_r); 
+		if ($p eq $Routes[-1]) { &underline_cell($p, $col_profit); }
 	} elsif (&is_item($p)) {
 		### Scenario 2: only show item quantity when bid/ask orders are visible
 		my $p_item = $p;
@@ -2465,6 +2619,7 @@ sub save_state {
 
 	### save selection
 	@State_selection = $w1->selectionGet();
+	$p_lastAltHighlight = 0;
 }
 sub restore_state {
 	### open/close modes
@@ -2482,6 +2637,8 @@ sub restore_state {
 	foreach my $p (@State_selection) {
 		if ($w1->infoExists($p)) {
 			$w1->selectionSet($p);
+			&highlight_return_route_cmd($p);
+			print ">>> selection set \"$p\"\n";
 		}
 	}
 	@State_selection = ();
@@ -2499,20 +2656,7 @@ sub redraw {
 	&restore_state();
 }
 
-my $reg_domain     = 10000043;
-my $reg_theforge   = 10000002;
-my $reg_sinqlaison = 10000032;
 
-my %reg_n2i = (
-	'Domain'      	=> $reg_domain,
-	'The Forge'   	=> $reg_theforge,
-	'Sinq Laison' 	=> $reg_sinqlaison,
-);
-my %reg_i2n = (
-	$reg_domain 	=> 'Domain',
-	$reg_theforge	=> 'The Forge',
-	$reg_sinqlaison => 'Sinq Laison',
-);
 
 my $last_req = '';
 sub export_crest_reqs {
