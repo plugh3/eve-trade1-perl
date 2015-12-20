@@ -123,8 +123,11 @@ while (1)
     flock($fh, LOCK_UN);
     fclose($fh);
 
-    if (count($rowsRaw) == 0) { if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} } 
-    else { $last_empty = 0; }
+    if (count($rowsRaw) == 0) { 
+      if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} 
+    } else { 
+      $last_empty = 0; 
+    }
 
     // aggregate rows by region => rowsByRegion[][]
     $rowsByRegion = array();
@@ -134,7 +137,8 @@ while (1)
         list($reg_id, $reg_name, $item_id, $item_name, $is_bid) = explode($sep, $row);
         
         // crest get cooldown (15s)
-        if (array_key_exists($row, $last2) && $time - $last2[$row] <= 15) { 
+        $cooldown_crest = 30;
+        if (array_key_exists($row, $last2) && $time - $last2[$row] <= $cooldown_crest) { 
             //echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n";
             continue; 
         }
@@ -144,7 +148,7 @@ while (1)
         $rowsByRegion[$reg_id][] = $row;
     }
     if (count($rowsByRegion) > 0) { $last = $mtime; }
-
+    if (count($rowsByRegion) > 0) { echo time2s()."php.requested(".count($rowsRaw).")\n";}
     
     // get crest data => Orders[r][i][]
     // via aysnc multiget for each region
@@ -173,7 +177,8 @@ while (1)
         
         // populate Orders[reg][item][]
         $suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
+        //echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
+        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix";
         $handler->getMultiMarketOrders(
             $typeIds, 
             $reg_id2, 
@@ -207,6 +212,7 @@ while (1)
               //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             }
         ); // end getMultiMarketOrders() call
+        echo "done\n";
       }
     }
     
