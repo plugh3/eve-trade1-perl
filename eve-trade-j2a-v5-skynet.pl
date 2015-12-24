@@ -274,7 +274,7 @@ sub import_item_db {
 		my $size = $ref->{'volume'};
 		$itemDB{$id} = join('~',$name,$id,$size);
 		$items_name{$id} = $name;
-		$items_size{$id} = $size;
+		$items_size{$id} = ($size > 0) ? ($size) : 0.01;
 		$items_old{$id} = 1;	}
 	$sth->finish();
 	$dbh->disconnect();
@@ -1427,10 +1427,11 @@ while (1) {
 	my $loop_rdm = 0;
 	my $now = time;
 	my $last_elapsed = $now - $last_loop;
+	$last_loop = $now;
+
 	my $nap = 0;
 	if ($last_elapsed < $loop_min) { $nap = $loop_min - $last_elapsed + int(rand($loop_rdm)); }
 	print "loop=".$last_elapsed.", nap=".$nap.".0s\n";
-	$last_loop = $now;
 	print "\nSleeping for ".sprintf("%3i", $nap)." sec"; flush STDOUT;
 	for my $n (1..$nap) {
 		sleep(1);

@@ -64,11 +64,19 @@ $pid_crest = substr($pid_crest, 1);
 my $pid_skynet = fork;
  if (!$pid_skynet) {
 	### skynet (evecentral + marketlogs gets)
-	system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
+	system("start run-skynet.bat"); ## new window, persist after die (DEBUG)
+	#system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
 	exit;
 }
 $pid_skynet = substr($pid_skynet, 1);
 #print "pid_skynet $pid_skynet\n";
+
+
+sub my_beep {
+	### beep
+	print "\07";
+	#$mw->bell; # beep
+}
 
 
 
@@ -294,7 +302,9 @@ sub copy2clip_iterate {
 			my ($r2, $id2) = split($Sep, $p_cycle);
 			### copy to clipboard
 			Clipboard->copy($items_name{$id2});
-			$mw->bell; # beep
+			### beep
+			&my_beep();
+
 			redraw();
 			last;
 		}
@@ -608,8 +618,8 @@ sub get_style {
 	if (! $style2) {
 		$style2 = $mw->ItemStyle($itemtype, (@style_as_ary));
 		$Styles{$style_as_id} = $style2;
-		print ">>> mod_style() new >[$itemtype]$style_as_id<\n";
-		print "    -itemtype => $itemtype\n";
+		#print ">>> mod_style() new >[$itemtype]$style_as_id<\n";
+		#print "    -itemtype => $itemtype\n";
 		foreach my $key (@fields_style) { print "    $key => $style_as_hsh{$key}\n"; }
 	} else {
 		#print ">>> mod_style() dup\n";
@@ -643,7 +653,7 @@ sub mod_style {
 	if (! $style2) {
 		$style2 = $mw->ItemStyle($itemtype, (@style_as_ary));
 		$Styles{$style_as_id} = $style2;
-		print ">>> mod_style() new\n[$itemtype]$style_as_id<\n";
+		#print ">>> mod_style() new\n[$itemtype]$style_as_id<\n";
 		#print "    -itemtype => $itemtype\n";
 		#foreach my $key (@fields_style) { print "    $key => $style_as_hsh{$key}\n"; }
 	} else {
@@ -783,7 +793,7 @@ sub notify_add {
 	if ($Data{$r}{$id}{Ignore}) { return; }
 	
 	$Notify{$key} = $Data{$r}{$id}{Profit};
-	if ($Data{$r}{$id}{Profit} > $notify_threshold_price_super) { $mw->bell; }
+	if ($Data{$r}{$id}{Profit} > $notify_threshold_price_super) { &my_beep(); }
 }
 
 my @test_colors = ();
@@ -964,7 +974,7 @@ sub fn_iterative_copy {
 
 	my ($r2, $id2) = split($Sep, $p_cycle);
 	Clipboard->copy($items_name{$id2});
-	$mw->bell;
+	&my_beep();
 	&redraw();
 }
 my $menucmd_iterative_copy = ['command', 'Iterative copy', -command => \&fn_iterative_copy];
@@ -981,7 +991,7 @@ sub fn_iterate {
 		$h_cycle->cancel();
 		print &time2s()." iterate() cycle ended\n";
 		$p_cycle = '';
-		$mw->bell;
+		&my_beep();
 		&redraw();
 	}
 }
