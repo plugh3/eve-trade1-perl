@@ -6,7 +6,7 @@ use warnings;
 
 use DBI;
 use Fcntl qw(:DEFAULT :flock);
-use HTML::FormatText;
+use HTML::FormatText; # cpan
 use HTML::Parse;
 use HTTP::Async;
 use List::Util qw (shuffle);
@@ -64,14 +64,11 @@ my %primary_stations = (
 );
 
 
-my $item_db_overwrite = 1;  
-my $shopping_fname_prefix = "eve-shopping-";
-my $debug_filename = "eve-shopping-debug.txt";
-my $itemDBfilename = "eve-trade-itemdb.txt";
-my $market_db_filename = "eve-trade-marketdb.txt";
-my $market_db_filename2 = "eve-trade-marketdb2.txt";
-my $get_log_fname = "eve-trade-log-gets.txt";
-my $cargo_filename = "data-sky2dash.txt";
+my $debug_filename = 		"data-sky-debug.txt";
+my $market_db_filename = 	"data-sky-orders.txt";
+my $cargo_filename = 		"data-sky2dash.txt";
+my $shopping_fname_prefix = 	"data-route-";
+my $get_log_fname = 		"log-gets.txt";
 
 
 my %items_ignore = (
@@ -279,33 +276,6 @@ sub import_item_db {
 	$sth->finish();
 	$dbh->disconnect();
 
-}
-
-my $n_exports = 0; # itemDB exports
-sub export_item_db {
-	my $FH;
-	my $mode = ($item_db_overwrite ? '>:crlf' : '>>:crlf');
-	open($FH, $mode, $itemDBfilename) or die "Open.write of \"$itemDBfilename\" failed!";
-	flock($FH, LOCK_EX);
-
-	if ($item_db_overwrite) { print "Re-sorting item DB.\n";}
-
-	foreach my $key (sort sort_id_by_name (keys %itemDB)) {
-		if ($item_db_overwrite) {
-			### overwrite all records
-			print $FH "$itemDB{$key}\n"; ### same formats for itemDB[] and DB file
-			$n_exports++;
-		} else {
-			### add new records only
-			if (! $items_old{$key}) {
-				print $FH "$itemDB{$key}\n"; ### same formats for itemDB[] and DB file
-				$n_exports++;
-			}
-		}
-	}
-
-	close $FH;
-	print "Exported item DB.\n";
 }
 
 my %get_errors = ();
@@ -542,11 +512,13 @@ my $n_offers_new = 0;
 my $time_main = 0;
 my $time_parse = 0;
 my $time_parse_all = 0;
+my $html_size_pass = 0;
+my $html_size_total = 0;
 sub parse_orders {
 	my ($html_raw, $fetch_time) = @_;
 	my ($from, $to);
 	my $html_size = length($html_raw);
-
+	$html_size_pass += $html_size;
 
 	### parse to order start
 	$html_raw =~ /$regexp_html_init/;
@@ -619,13 +591,15 @@ sub parse_orders {
 		#print ">>> $id $name ask $ask_price x $ask_vol at ".&where2s($ask_loc)." ".&ago($ask_time)."\n";
 		#print ">>> $id $name bid $bid_price x $bid_vol at ".&where2s($bid_loc)." ".&ago($bid_time)."\n";
 		
-		### fetch item data if not buffered
 		
-		if (exists $itemDB{$id} || &get_item_info($url_item, $id, $name)) {
+		### NEW: itemDB is now linked directly to mysql; if item_id is not in there, will cause problems downstream
+		### OLD: fetch item data if not buffered
+		#if (exists $itemDB{$id} || &get_item_info($url_item, $id, $name)) {
+			
+		if ( exists $itemDB{$id} ) {
 			if ($name ne $items_name{$id}) {
 				#print ">>> converting item name \"$items_name{$id}\" from \"$name\"\n";
 				$name = $items_name{$id};					}
-			### initialize hashes (confirmed necessary)
 			
 			### NOTE: Perl references are weird.
 			### Passing "\@{$Bids{$id}}" to fn always works.
@@ -641,8 +615,10 @@ sub parse_orders {
 
 			### add bid
 			if (&primary($bid_loc)) { ### skip orders from non-primary stations
+				### initialize hashes (required)
 				if (! $Bids{$bid_loc})      { $Bids{$bid_loc} = ();      $Bids2{$bid_loc} = (); }
 				if (! $Bids{$bid_loc}{$id}) { $Bids{$bid_loc}{$id} = (); $Bids2{$bid_loc}{$id} = (); }
+
 				if (&dup_order(\@{$Bids{$bid_loc}{$id}}, $bid_price, $bid_vol)) {
 					### saw in this fetch (dup)
 					$n_dups++;
@@ -670,8 +646,10 @@ sub parse_orders {
 						
 			### add ask
 			if (&primary($ask_loc)) { ### skip orders from non-primary stations
+				### initialize hashes (required)
 				if (! $Asks{$ask_loc})      { $Asks{$ask_loc} = ();      $Asks2{$ask_loc} = (); }
 				if (! $Asks{$ask_loc}{$id}) { $Asks{$ask_loc}{$id} = (); $Asks2{$ask_loc}{$id} = (); }
+
 				if (&dup_order(\@{$Asks{$ask_loc}{$id}}, $ask_price, $ask_vol)) {
 					$n_dups++;
 				} else {
@@ -695,9 +673,8 @@ sub parse_orders {
 				}
 			}
 		} else {
-			### get_item() failed
-			### this could be because we exceeded the GET quota, or failed to parse the item page
-			### result is we just move on to the next record
+			### item ID not in item DB
+			print "\n>>> item no. $id not in database!\n";
 		}
 
 		&timer_start("parse");
@@ -1328,6 +1305,7 @@ while (1) {
 
 
 
+
 	$time_fetchall = 0;
 	&timer_start("fetchall");
 
@@ -1356,9 +1334,11 @@ while (1) {
 
 	### parse html	$time_parseall = 0;
 	&timer_start("parse_all");
+	$html_size_pass = 0;
 	foreach my $html (@html_responses) {
 		&parse_orders($html, $fetch_time); # populate Bids/Asks[] ###
 	}
+	$html_size_total += $html_size_pass;
 	$time_parseall = &timer_stop("parse_all");
 	
 	$time_fetchall = &timer_stop("fetchall");
@@ -1395,8 +1375,6 @@ while (1) {
 
 	### debug output
 	print "\n\n";
-	print sprintf("%7i", $n_imports).	" items read\n"; 	$n_imports = 0;
-	print sprintf("%7i", $n_exports).	" items written\n"; 	$n_exports = 0;
 	print sprintf("%7i", $n_orders_old).	" orders imported\n";	$n_orders_old = 0;
 	print sprintf("%7i", $n_offers_new).	" current orders\n";	$n_offers_new = 0;
 	print sprintf("%7i", $n_market_exports)." orders exported\n";	$n_market_exports = 0;
@@ -1409,6 +1387,9 @@ while (1) {
 	print sprintf("%7i", $nGets).		" GETs performed\n";	$nGets = 0;
 	print sprintf("%7i", $n_dup_checks).	" duplicate checks\n";	$n_dup_checks = 0;
 	print sprintf("%7i", $n_sort_by_price).	" sorts by price\n";	$n_sort_by_price = 0;
+	print "---\n";
+	print sprintf("%6.1f", $html_size_pass/1000000.0). "MB fetched [evecentral]\n";
+	print sprintf("%6.1f", $html_size_total/1000000.0). "MB fetched lifetime\n";
 	print "---\n";
 	print "  ".&timer2s($time_fetchall)." fetch + parse\n";		$time_fetchall = 0;
 	print "  ".&timer2s($time_getall)." get_html_orders()\n";	$time_getall = 0;

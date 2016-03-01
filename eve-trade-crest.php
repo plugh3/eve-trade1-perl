@@ -20,7 +20,6 @@ $client = new iveeCrest\Client(
 //concat
 
 // OS-specific stuff
-//$dir_export = '/Users/csserra/Library/Application\ Support/EVE\ Online/p_drive/User/My\ Documents/EVE/logs/Marketlogs/';
 switch (strtolower(php_uname("s"))) {
     case "darwin":
         $dir_home = getenv("HOME");
@@ -34,6 +33,7 @@ switch (strtolower(php_uname("s"))) {
         echo ">>> unknown OS type ".php_uname("s")."\n";
         exit;
 }        
+$fname_crest_reqs = 'data-dash2crest.txt';
 
 
 //instantiate an endpoint handler
@@ -103,7 +103,6 @@ $item_iname2fname = array(
  	'Beta Reactor Control: Shield Power Relay I' => 'Beta Reactor Control_ Shield Power Relay I',
 );
 */
-$old_access_token = '9uOF0I5F0CjDeRyu97bvOCj9PNFdkTDfhiV-LSiiu1ZTQClrtMF2hmyXn9V9WDWGBAPKKgI4_D4sgzCAJxnplA2'; // 5/1 2:58pm
 
 $sep = '~';
 
@@ -124,12 +123,13 @@ $last2 = array();   // time of last export, by filename
 $last_empty = 0;
 while (1)
 {
-    $fnameReqsShort = 'eve-trade-crest-reqs.txt';
+    $fnameReqsShort = $fname_crest_reqs;
     $fnameReqs = __DIR__.'/'.$fnameReqsShort;
-    // check if request file updated
+    // check if request file has been updated
     clearstatcache();
+	while (!file_exists($fnameReqs)) { sleep(1); }
     $mtime = filemtime($fnameReqs);
-    if (!$mtime or $mtime <= $last) { sleep(1); continue; } 
+    while ($mtime <= $last) { sleep(1); } 
     
     
     // import request file => rowsRaw[]
@@ -219,6 +219,7 @@ while (1)
                 // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
                 // so we need to merge responses into 1 array
                 $orders = $response->content->items;                
+                
                 if (isset($Orders[$reg_id][$item_id])) {
                     $Orders[$reg_id][$item_id]->orders = array_merge($Orders[$reg_id][$item_id]->orders, $orders);
                 } else {

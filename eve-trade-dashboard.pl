@@ -4,9 +4,14 @@ use 5.010;
 use strict;
 use warnings;
 
-#use Clipboard;
+### remote dependencies
+use Tk; ## cpan
+### remote dependencies - skynet
+#use HTML::FormatText;
+#use HTTP::Async;
+### other
 use Config;
-use DBI;
+use DBI; ## cpan
 use Fcntl qw(:DEFAULT :flock);
 #use constant LOCK_SH => 1;
 #use constant LOCK_EX => 2;
@@ -15,7 +20,6 @@ use List::Util qw (shuffle);
 use LWP::Simple;
 use Time::HiRes qw (gettimeofday);
 use Time::Local;
-use Tk;
 use Tk::HList;
 use Tk::Tree;
 use Tk::ItemStyle;
@@ -25,19 +29,12 @@ use Tk::Font;
 use Tk::ProgressBar;
 
 
+
 ### TODO: spawn processes on OSX
 
-my $cargo_filename = "data-sky2dash.txt";
-my $my_data_filename = "data-dash.txt";
-
-=begin
-my %dir_marketlogs_by_os = (
-	"darwin" => "/Users/csserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs",
-	"MSWin32" => "C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs"
-);
-my $dir_marketlogs = $dir_marketlogs_by_os{$Config{osname}};
-=cut
-
+my $cargo_filename = 		"data-sky2dash.txt";
+my $my_data_filename = 		"data-dash-all.txt";
+my $fname_crest_reqs = 		"data-dash2crest.txt";
 
 ### OS-specific stuff
 my $dir_sep;
@@ -57,10 +54,14 @@ if      ($Config{osname} eq "darwin") {
 
 
 
-### main window
-my $mw = MainWindow->new(-title => 'Tree');
-$mw->geometry("850x650");
 
+
+### INIT + SPAWN ###
+
+### wipe data files
+unlink $cargo_filename if (-e $cargo_filename);
+unlink $my_data_filename if (-e $my_data_filename);
+unlink $fname_crest_reqs if (-e $fname_crest_reqs);
 
 ### start local mysqld
 if (not (`tasklist` =~ m/mysqld/)) {
@@ -92,8 +93,8 @@ if (!$pid_crest) {
 	### CREST gets
 	#system("run-crest.bat"); ## same window
 	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php > out-crest.txt 2>&1"); ## new window + log
-	#system("start run-crest.bat"); ## new window, persist after die (DEBUG)
-	system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
+	system("start run-crest.bat"); ## new window, persist after die (DEBUG)
+	#system("start C:\\xampp\\php\\php.exe -f eve-trade-crest.php"); ## new window
 	exit;
 }
 $pid_crest = substr($pid_crest, 1);
@@ -110,6 +111,12 @@ my $pid_skynet = fork;
 $pid_skynet = substr($pid_skynet, 1);
 #print "pid_skynet $pid_skynet\n";
 
+
+
+
+### main window
+my $mw = MainWindow->new(-title => 'Tree');
+$mw->geometry("850x650");
 
 
 my $textbox = $mw->Text(); # never packed
@@ -204,9 +211,9 @@ my $color_hover =	'#5555ff';
 my $color_red = 	'#ff8888';
 my $color_brightred = 	'#ff3333';
 my $color_green = 	'#88ff88';
-#my $color_green = 	'#bb00bb';
-my $color_purple = 	'#ff00ff';
 my $color_yellow=	'#dfdf88';
+my $color_purple = 	'#c600ff';
+my $color_orange=       '#ff8000';
 
 
 
@@ -265,9 +272,10 @@ sub highlight_return_route_cmd {
 	my ($p_selected) = @_;
 	
 	if (! &is_route($p_selected)) { return; }
+	my ($from, $to) = split($RouteSep, $p_selected);
+	if (! $to) { print ">>> highlight_return_route() error: route = >$p_selected<\n"; return; }
 	
 	### construct string for return route
-	my ($from, $to) = split($RouteSep, $p_selected);
 	my $p_return = join($RouteSep, $to, $from);
 	#print &time2s()." highlight_return_route($p_return)\n";
 
@@ -634,26 +642,6 @@ my $style_indic2 = $w1->ItemStyle('image',
 	-activebackground => $color_fg,  	# Y
 );
 
-sub pick_color {
-	my ($p_item, $x) = @_;
-	if (&is_item($p_item) && ! $x) { 
-		my ($r, $i) = split($Sep, $p_item);
-		if ($Data{$r}{$i}{Ignore}) { 
-			change_color($p_item, $color_ig);
-		} elsif ($p_item eq $p_cycle) {
-			change_color($p_item, $color_brightred);
-		} else {
-			change_color($p_item, $color_green);
-		}
-	} elsif (&is_item($p_item) && $x) {
-		### p[x] => set [x] to match [0]
-		if (! $w1->itemExists($p_item, $x)) { return; }
-		my $styleref1 = $w1->itemCget($p_item, 0, '-style');
-		my $color = $styleref1->cget('-foreground');
-		&change_color_cell($p_item, $x, $color);
-	}	
-}
-
 
 ### Styles{} cache
 ### key = joined list of style fields
@@ -999,6 +987,28 @@ sub notify_color {
 
 
 
+my $p_cycle = '';
+my $p_cycle_first;
+
+sub pick_color {
+	my ($p_item, $x) = @_;
+	if (&is_item($p_item) && ! $x) { 
+		my ($r, $i) = split($Sep, $p_item);
+		if ($Data{$r}{$i}{Ignore}) { 
+			change_color($p_item, $color_ig);
+		} elsif ($p_item eq $p_cycle) {
+			change_color($p_item, $color_brightred);
+		} else {
+			change_color($p_item, $color_green);
+		}
+	} elsif (&is_item($p_item) && $x) {
+		### p[x] => set [x] to match [0]
+		if (! $w1->itemExists($p_item, $x)) { return; }
+		my $styleref1 = $w1->itemCget($p_item, 0, '-style');
+		my $color = $styleref1->cget('-foreground');
+		&change_color_cell($p_item, $x, $color);
+	}	
+}
 
 
 ### popup menu
@@ -1015,6 +1025,63 @@ my $menucmd_copy_item = ['command', 'Copy item', -command => sub {
 	if (! $i) { return 0; }
 	copy2clipboard($items_name{$i});
 }];
+
+
+sub copy2clip_iterate {
+	print &time2s()." copy2clip_iterate()\n";
+
+	my $r = &get_route($p_cycle);
+	my @p_items = $w1->infoChildren($r);
+	my $n = 0+@p_items;
+	foreach my $i (0..$n-1) {
+		my $p = $p_items[$i];
+		my ($r, $id) = split($Sep, $p);
+		if ($id eq 'TOTAL') { last; }
+		if ($Data{$r}{$id}{Ignore}) { next; }
+		if ($p eq $p_cycle) { 
+			### advance iterator
+			my $i2 = &next_item(\@p_items, $i);
+			$p_cycle = $p_items[$i2];
+			my ($r2, $id2) = split($Sep, $p_cycle);
+			### copy to clipboard
+			Clipboard->copy($items_name{$id2});
+			### beep
+			&my_beep();
+
+			redraw();
+			last;
+		}
+	}
+	
+
+}
+sub next_item {
+	my ($aref, $i1) = @_;
+	my @p_items = @{$aref};
+	my $n = 0+@p_items;
+	my $i2 = $i1;
+
+	while (1) {
+		$i2 = ($i2 + 1) % $n;
+		my $p = $p_items[$i2];
+		my ($r, $id) = split($Sep, $p);
+		if ($i2 == $i1) { return $i2;}  ### avoids infinite loop, but could return original $i1
+		if ($id eq 'TOTAL') { next; }
+		if ($Data{$r}{$id}{Ignore}) { next; }
+		print "next_item($i1) => \#$i2 $items_name{$id}\n";
+		return $i2;
+	}
+}
+sub get_route {
+	my ($p) = @_;
+	while ($p && ! &is_route($p)) {
+		$p = $w1->infoParent($p);
+	}
+	return $p;
+}
+
+
+
 sub fn_iterative_copy {
 	my ($p) = @_;
 	if (! $p) { $p = $This; }
@@ -1041,6 +1108,12 @@ sub fn_iterate_start {
 	$p_cycle_first = $p_cycle;
 	$h_cycle = $w1->repeat(5500, \&fn_iterate);
 }
+sub fn_iterate_start_fast {
+	&fn_iterative_copy();
+	$p_cycle_first = $p_cycle;
+	sleep 1;
+	$h_cycle = $w1->repeat(3500, \&fn_iterate);
+}
 sub fn_iterate {
 	&copy2clip_iterate();
 	if ($p_cycle eq $p_cycle_first) {
@@ -1055,6 +1128,7 @@ sub fn_iterate_stop {
 	$h_cycle->cancel();
 }
 my $menucmd_iterate_start = ['command', 'Iterate', -command => \&fn_iterate_start];
+my $menucmd_iterate_start2 = ['command', 'Fast Iterate', -command => \&fn_iterate_start_fast];
 my $menucmd_iterate_stop = ['command', 'Stop iterate', -command => \&fn_iterate_stop];
 
 sub toggle_item {
@@ -1236,6 +1310,7 @@ my $menuitems_item = [
 	$menucmd_copy_route,
 	$menucmd_copy_item,
 	$menucmd_iterate_start,
+	$menucmd_iterate_start2,
 	'',
 	$menucmd_ignore,
 	$menucmd_ignore_below,
@@ -1250,6 +1325,7 @@ my $menuitems_item = [
 my $menuitems_route = [
 	$menucmd_copy_route,
 	$menucmd_iterate_start,
+	$menucmd_iterate_start2,
 	'',
 	$menucmd_collapse_all,		
 	'',
@@ -1780,6 +1856,14 @@ sub route2clipboard {
 	copy2clipboard($text);
 }
 
+sub items_size {
+	my ($id) = @_;
+	if (not exists $items_size{$id}) {
+		print &time2s." >>> undefined item ID $id\n";
+		exit;
+	}
+	return $items_size{$id};
+}
 
 sub import_item_db {
 	print &time2s()." import_item_db()\n";
@@ -1803,7 +1887,6 @@ sub import_item_db {
 	$sth->finish();
 	$dbh->disconnect();
 }
-
 
 ### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
 sub import_from_server {
@@ -1836,6 +1919,9 @@ sub import_from_server {
 		my $r = &locs2r($from, $to);
 		$latest = &max($latest, $when);
 
+		### if item_id is not in DB, this isn't going to work (skip)
+		if (! $items_name{$id}) { next; }
+
 		### initialize hashes
 		if (! $Bids{$where})    {$Bids{$where}   = ();}
 		if (! $Asks{$where})    {$Asks{$where}   = ();}
@@ -1851,7 +1937,8 @@ sub import_from_server {
 		#print $t."\n";
 
 		my $flag_ignore = 0;
-		my $tuple = join(':', ($price, $vol, $flag_ignore, $when));
+		### construct order
+		my $tuple = join(':', ($price, $vol, $flag_ignore, $when, 'evecentral'));
 		if ($bidask eq 'ask') {
 			push(@{$Asks{$where}{$id}}, $tuple);
 		} else {
@@ -1897,7 +1984,7 @@ sub import_from_server {
 				if ($to_stn eq $ask_loc) { next; }
 				my $r = &locs2r($ask_loc, $to_stn);
 
-				### import route parameters from evecentral
+				### add $Data[] placeholders for each route (this triggers evecentral queries)
 				if (! $Data{$r}{$id} ) {
 					$Data{$r}{$id}{From} = $ask_loc;
 					$Data{$r}{$id}{To} = $bid_loc;
@@ -1913,23 +2000,6 @@ sub import_from_server {
 				}
 			}
 		
-=begin
-			### import route parameters from evecentral
-			my $r = &locs2r($ask_loc, $bid_loc);
-			if (! $Data{$r}{$id} ) {
-				$Data{$r}{$id}{From} = $ask_loc;
-				$Data{$r}{$id}{To} = $bid_loc;
-				$Data{$r}{$id}{Route} = $r;
-				$Data{$r}{$id}{Item} = $id;
-				$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
-				$Data{$r}{$id}{Bids} = ();
-				$Data{$r}{$id}{Bids_Reliable} = 0;
-				$Data{$r}{$id}{Bids_Age} = 0;
-				$Data{$r}{$id}{Asks} = ();
-				$Data{$r}{$id}{Asks_Reliable} = 0;
-				$Data{$r}{$id}{Asks_Age} = 0;
-			}
-=cut
 
 			### do NOT import detailed order data from evecentral
 			#if (! $Data{$r}{$id}{Bids}) {
@@ -2039,18 +2109,18 @@ sub export_my_data {
 		foreach my $i (keys %{$Data{$r}}) {
 			foreach my $x (@{$Data{$r}{$i}{Asks}}) {
 				my $bidask = 'ask';
-				my ($price, $vol, $flag_ignore, $modtime) = split(':', $x);
+				my ($price, $vol, $flag_ignore, $modtime, $orderID) = split(':', $x);
 				my $flag_reliable = $Data{$r}{$i}{Asks_Reliable};
 
-				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable);
+				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID);
 				print $FH $line."\n";
 			}
 			foreach my $x (@{$Data{$r}{$i}{Bids}}) {
 				my $bidask = 'bid';
-				my ($price, $vol, $flag_ignore, $modtime) = split(':', $x);
+				my ($price, $vol, $flag_ignore, $modtime, $orderID) = split(':', $x);
 				my $flag_reliable = $Data{$r}{$i}{Bids_Reliable};
 
-				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable);
+				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID);
 				print $FH $line."\n";
 			}
 		}
@@ -2070,7 +2140,7 @@ sub import_my_data {
 
 		while (<$FH>) {
 			chomp;
-			my ($r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable) = split(':');
+			my ($r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID) = split(':');
 
 			if (time - $modtime > $age_expire_web) { next; }
 
@@ -2092,7 +2162,8 @@ sub import_my_data {
 			}
 
 			### populate bid/ask order
-			my $x = join(':', $price, $vol, $flag_ignore, $modtime);
+			### construct order
+			my $x = join(':', $price, $vol, $flag_ignore, $modtime, $orderID);
 			if ($bidask eq 'ask') {
 				push (@{$Data{$r}{$i}{Asks}}, $x);
 				$Data{$r}{$i}{Asks_Age} = &max($Data{$r}{$i}{Asks_Age}, $modtime);
@@ -2130,6 +2201,152 @@ sub checksum_out {
 	return $out;
 }
 
+
+sub match_until_size {
+	my ($r, $id, $max) = @_;
+	
+	### reset subtotals
+	$Data{$r}{$id}{Profit} = 0;
+	$Data{$r}{$id}{Cost} = 0;
+	$Data{$r}{$id}{Qty} = 0;			
+	$Data{$r}{$id}{Size} = 0;
+	$Data{$r}{$id}{ROI} = 0; 
+	$Data{$r}{$id}{ProfitPerSize} = 0;
+	$Data{$r}{$id}{Age} = 0;
+	$Data{$r}{$id}{Checksum} = &checksum_new; 
+
+	if (!$Data{$r}{$id}{Asks_Reliable}) { $Data{$r}{$id}{Asks_Age} = 0; }
+	if (!$Data{$r}{$id}{Bids_Reliable}) { $Data{$r}{$id}{Bids_Age} = 0; }
+
+	### match bids/asks
+	my $ask_loc = $Data{$r}{$id}{From};
+	my $bid_loc = $Data{$r}{$id}{To};
+	my $n_bids = scalar(@{$Data{$r}{$id}{Bids}});
+	my $n_asks = scalar(@{$Data{$r}{$id}{Asks}});
+	my $i_bid = 0;
+	my $i_ask = 0;
+	my $last_i_bid = -1;
+	my $last_i_ask = -1;
+	my $last_bid_rem = 0;
+	my $last_ask_rem = 0;
+	my $Eject = 0;
+	
+	### TODO: sort Bids + Asks
+	 
+	### find profitable order matches
+	while (($i_bid < $n_bids) && ($i_ask < $n_asks)) {
+		my $bid = $Data{$r}{$id}{Bids}[$i_bid];
+		my $ask = $Data{$r}{$id}{Asks}[$i_ask];
+		my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
+		my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
+
+		### "age" = time of most profitable order (i==0)
+		if ($i_ask == 0) { $Data{$r}{$id}{Asks_Age} = $ask_when; }
+		if ($i_bid == 0) { $Data{$r}{$id}{Bids_Age} = $bid_when; }
+
+		### order-level: check profit per size
+		### this also flags unprofitables
+		my $profit = (($Net_tax * $bid_price) - $ask_price);
+		my $profit_per_vol = $profit / &items_size($id);
+		if ($profit_per_vol < $minProfitPerSize) {
+			last; ### skip
+		}
+
+		### carryover remainder qty
+		if ($i_bid == $last_i_bid) { $bid_vol = $last_bid_rem; }
+		if ($i_ask == $last_i_ask) { $ask_vol = $last_ask_rem; }
+		$last_i_bid = $i_bid;
+		$last_i_ask = $i_ask;
+		my $qty = &min($bid_vol, $ask_vol);
+		$last_bid_rem = $bid_vol - $qty;
+		$last_ask_rem = $ask_vol - $qty;
+		### ptr increment
+		if ($last_bid_rem == 0) { $i_bid++; }
+		if ($last_ask_rem == 0) { $i_ask++; }
+		$N_orders++;
+
+		### aggregate item data
+		$Data{$r}{$id}{Profit} += $qty * (($Net_tax * $bid_price) - $ask_price);
+		$Data{$r}{$id}{Cost} += $qty * $ask_price;
+		$Data{$r}{$id}{Qty} += $qty;
+		$Data{$r}{$id}{Size} += $qty * &items_size($id);
+		$Data{$r}{$id}{ROI} = $Data{$r}{$id}{Profit}/$Data{$r}{$id}{Cost};
+		#$Data{$r}{$id}{Asks_Age} = &max($Data{$r}{$id}{Asks_Age}, $ask_when);
+		#$Data{$r}{$id}{Bids_Age} = &max($Data{$r}{$id}{Bids_Age}, $bid_when);
+		
+		### hash string format
+		my $tradeStr = "$r, $id, $qty, $ask_price, $bid_price";
+		&checksum_add($Data{$r}{$id}{Checksum}, $tradeStr);
+		&checksum_add($Totals{$r}{Checksum}, $tradeStr);
+	}
+	### loop exits on (a) first unprofitable match or (b) ran out of bids or asks
+	### if last order was partially consumed, skip to next
+	if ($last_bid_rem != 0) { $i_bid++; }
+	if ($last_ask_rem != 0) { $i_ask++; }
+	### last profitable match is Bid[$i_bid-1], Ask[$i_ask-1]
+
+
+	### Filter: below profitability threshold, delete item
+	### item-level: check total profit
+	### this should catch the scenario of zero matches
+	if ($Data{$r}{$id}{Profit} < $minProfit) {
+		#print &time2s." >>> skipping $r :: ".$items_name{$id}." (profit=".$Data{$r}{$id}{Profit}.")\n";
+		delete $Data{$r}{$id};
+		next;
+	}
+
+
+	### filter unmatched asks for unprofitables
+	### Asks[] is sorted by decreasing profitability
+	if ($i_ask < $n_asks) {
+		my $i_bid_last = $i_bid - 1;
+		my $bid = $Data{$r}{$id}{Bids}[$i_bid_last]; ### last profitable bid
+		my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
+		foreach my $i ($i_ask..$n_asks-1) { 
+			my $ask = $Data{$r}{$id}{Asks}[$i];
+			my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
+			my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / &items_size($id);
+			### find first unprofitable order, then ignore all
+			if ($profit_per_vol < $minProfitPerSize) {
+				#print "ignoring ".($n_asks-$i)." asks $items_name{$id} [$r]\n";
+				### ignore all remaining orders
+				for my $i2 ($i..$n_asks-1) {
+					### set ignore flag
+					my $ask3 = $Data{$r}{$id}{Asks}[$i2];
+					my ($ask3_price, $ask3_vol, $ask3_flag, $ask3_when, $orderID) = split(':', $ask3);
+					$ask3_flag = 1; ### set to ignore
+					$ask3 = join(':', $ask3_price, $ask3_vol, $ask3_flag, $ask3_when, $orderID);
+					$Data{$r}{$id}{Asks}[$i2] = $ask3;
+				}
+				last;
+			}
+		}
+	}
+	### filter unmatched bids for unprofitables
+	### Bids[] is sorted by decreasing profitability
+	if ($i_bid < $n_bids) {
+		my $i_ask_last = $i_ask - 1;
+		my $ask = $Data{$r}{$id}{Asks}[$i_ask_last]; ### last profitable ask
+		my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
+		foreach my $i ($i_bid..$n_bids-1) { 
+			my $bid = $Data{$r}{$id}{Bids}[$i];
+			my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
+			my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / &items_size($id);
+			### find first unprofitable order, then ignore all
+			if ($profit_per_vol < $minProfitPerSize) {
+				#print "ignoring ".($n_bids-$i)." bids $items_name{$id} [$r]\n";
+				for my $i2 ($i..$n_bids-1) {
+					my $bid3 = $Data{$r}{$id}{Bids}[$i2];
+					my ($bid3_price, $bid3_vol, $bid3_flag, $bid3_when, $orderID) = split(':', $bid3);
+					$bid3_flag = 1; ### set to ignore
+					$bid3 = join(':', $bid3_price, $bid3_vol, $bid3_flag, $bid3_when, $orderID);
+					$Data{$r}{$id}{Bids}[$i2] = $bid3;
+				}
+				last;
+			}
+		}
+	}
+}
 
 ### recalc(): calculate subtotals by item + route
 ### IN: Data[]
@@ -2203,24 +2420,8 @@ sub recalc {
 				### order-level: check profit per size
 				### this also flags unprofitables
 				my $profit = (($Net_tax * $bid_price) - $ask_price);
-				my $profit_per_vol = $profit / $items_size{$id};
+				my $profit_per_vol = $profit / &items_size($id);
 				if ($profit_per_vol < $minProfitPerSize) {
-=begin					
-					if ($i_bid == 0 and $i_ask == 0) {
-						print &time2s." >>> ppv fail $r :: ".$items_name{$id}." (ppv=".$profit_per_vol.")\n";
-						for (my $x = 0; $x < $n_asks; $x++) {
-							my $ask = $Data{$r}{$id}{Asks}[$x];
-							my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
-							print &time2s."     ask ".&comma($ask_price)." x ".&commai($ask_vol)."\n";
-						}
-						print &time2s."     ---\n";
-						for (my $x = 0; $x < $n_bids; $x++) {
-							my $bid = $Data{$r}{$id}{Bids}[$x];
-							my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
-							print &time2s."     bid ".&comma($bid_price)." x ".&commai($bid_vol)."\n";
-						}
-					}
-=cut
 					last; ### skip
 				}
 
@@ -2241,7 +2442,7 @@ sub recalc {
 				$Data{$r}{$id}{Profit} += $qty * (($Net_tax * $bid_price) - $ask_price);
 				$Data{$r}{$id}{Cost} += $qty * $ask_price;
 				$Data{$r}{$id}{Qty} += $qty;
-				$Data{$r}{$id}{Size} += $qty * $items_size{$id};
+				$Data{$r}{$id}{Size} += $qty * &items_size($id);
 				$Data{$r}{$id}{ROI} = $Data{$r}{$id}{Profit}/$Data{$r}{$id}{Cost};
 				#$Data{$r}{$id}{Asks_Age} = &max($Data{$r}{$id}{Asks_Age}, $ask_when);
 				#$Data{$r}{$id}{Bids_Age} = &max($Data{$r}{$id}{Bids_Age}, $bid_when);
@@ -2277,7 +2478,7 @@ sub recalc {
 				foreach my $i ($i_ask..$n_asks-1) { 
 					my $ask = $Data{$r}{$id}{Asks}[$i];
 					my ($ask_price, $ask_vol, $ask_flag, $ask_when) = split(':', $ask);
-					my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / $items_size{$id};
+					my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / &items_size($id);
 					### find first unprofitable order, then ignore all
 					if ($profit_per_vol < $minProfitPerSize) {
 						#print "ignoring ".($n_asks-$i)." asks $items_name{$id} [$r]\n";
@@ -2285,9 +2486,9 @@ sub recalc {
 						for my $i2 ($i..$n_asks-1) {
 							### set ignore flag
 							my $ask3 = $Data{$r}{$id}{Asks}[$i2];
-							my ($ask3_price, $ask3_vol, $ask3_flag, $ask3_when) = split(':', $ask3);
+							my ($ask3_price, $ask3_vol, $ask3_flag, $ask3_when, $orderID) = split(':', $ask3);
 							$ask3_flag = 1; ### set to ignore
-							$ask3 = join(':', $ask3_price, $ask3_vol, $ask3_flag, $ask3_when);
+							$ask3 = join(':', $ask3_price, $ask3_vol, $ask3_flag, $ask3_when, $orderID);
 							$Data{$r}{$id}{Asks}[$i2] = $ask3;
 						}
 						last;
@@ -2303,15 +2504,15 @@ sub recalc {
 				foreach my $i ($i_bid..$n_bids-1) { 
 					my $bid = $Data{$r}{$id}{Bids}[$i];
 					my ($bid_price, $bid_vol, $bid_flag, $bid_when) = split(':', $bid);
-					my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / $items_size{$id};
+					my $profit_per_vol = (($Net_tax * $bid_price) - $ask_price) / &items_size($id);
 					### find first unprofitable order, then ignore all
 					if ($profit_per_vol < $minProfitPerSize) {
 						#print "ignoring ".($n_bids-$i)." bids $items_name{$id} [$r]\n";
 						for my $i2 ($i..$n_bids-1) {
 							my $bid3 = $Data{$r}{$id}{Bids}[$i2];
-							my ($bid3_price, $bid3_vol, $bid3_flag, $bid3_when) = split(':', $bid3);
+							my ($bid3_price, $bid3_vol, $bid3_flag, $bid3_when, $orderID) = split(':', $bid3);
 							$bid3_flag = 1; ### set to ignore
-							$bid3 = join(':', $bid3_price, $bid3_vol, $bid3_flag, $bid3_when);
+							$bid3 = join(':', $bid3_price, $bid3_vol, $bid3_flag, $bid3_when, $orderID);
 							$Data{$r}{$id}{Bids}[$i2] = $bid3;
 						}
 						last;
@@ -2338,6 +2539,11 @@ sub recalc {
 			&notify_check($r, $id);
 		
 		} # end item loop
+
+		### adjust if over volume
+		if ($Totals{$r}{Size} > 8967.0) {
+			
+		}
 
 		$GrandTotal += $Totals{$r}{Profit};
 	} # end route loop
@@ -2473,8 +2679,20 @@ sub repop {
 =cut
 
 		### Filter 3: change Cost to red if over threshold
-		if ($Totals{$r}{Cost} > $total_cost_threshold) { 
+		if ($Totals{$r}{Cost} > 7_000_000_000) { 
 			&change_color_cell($p_route, $col_cost, $color_red); 
+		}
+
+		### Filter 4: change Profit color if over threshold
+		if ($Totals{$r}{Profit} > 100_000_000) { 
+			&change_color_cell($p_route, $col_profit, $color_orange); 
+		} elsif ($Totals{$r}{Profit} > 50_000_000) { 
+			&change_color_cell($p_route, $col_profit, $color_purple); 
+		}
+
+		### Filter 5: change Volume color if over threshold
+		if ($Totals{$r}{Size} > 8967) { 
+			&change_color_cell($p_route, $col_size, $color_red); 
 		}
 
 
@@ -2510,13 +2728,30 @@ sub repop {
 			### set line color based on ignore/confirmed status (red/yellow/green/grey)
 			&color_item($r, $i);
 			
+			### Color [ROI < 0.5%] red
+			if ($Data{$r}{$i}{ROI} < 0.005) { 
+				&change_color_cell($p_item, $col_roi, $color_red); 
+			}
+			### Color [ROI > 20%] purple
+			if ($Data{$r}{$i}{ROI} > 0.20) { 
+				&change_color_cell($p_item, $col_roi, $color_purple); 
+			}
+			### Color [Age > 1hr] yellow
+			if (time - $Data{$r}{$i}{Age} > 3600) { 
+				&change_color_cell($p_item, $col_age, $color_yellow); 
+			}
+
+			
 			if (scalar(@{$Data{$r}{$i}{Bids}}) == 0) { warn ">>> empty Bids[] $r $i $items_name{$i}"; } ### sanity check
 			if (scalar(@{$Data{$r}{$i}{Asks}}) == 0) { warn ">>> empty Asks[] $r $i $items_name{$i}"; } ### sanity check
 
 			### UI line: Asks 
+			my $n_ignores = 0;
+			my $kIgnoresHideAfter = 3;
 			foreach my $ask (@{$Data{$r}{$i}{Asks}}) {
-				my ($price, $vol, $flag_ignore, $when) = split(':', $ask);
-				my $n = join(':', 'ask', $price, $vol, $when);
+				my ($price, $vol, $flag_ignore, $when, $orderID) = split(':', $ask);
+				my $where = $Data{$r}{$i}{From};
+				my $n = join(':', 'ask', $price, $vol, $when, $orderID);
 				my $p = $r.$Sep.$i.$Sep.$n;
 				#print "add ask $r.$items_name{$i}.$n  $price x $vol\n";
 
@@ -2524,23 +2759,44 @@ sub repop {
 				my @o_l = @opts_l;
 				my @o_r = @opts_r;
 				if ($Data{$r}{$i}{Ignore} || $flag_ignore) {
+					$n_ignores++;
 					@o_l = @opts_ignore_l;
 					@o_r = @opts_ignore_r;
 				}
+				### check for duplicate order
+				if ($w1->infoExists($p)) {
+					print(&time2s.">>> duplicate order: $p at ".&time2s($when)."\n");
+					next;
+				}
+				
+				if ($n_ignores == 0 or $n_ignores < $kIgnoresHideAfter+1) {
+					$w1->add($p, -text => '');
+					$w1->itemCreate($p, $col_route, -text => &where2s($where).$Post, @o_r); 
+					$w1->itemCreate($p, $col_profit, -text => 'ask  '.$Post, @o_r); 
+					$w1->itemCreate($p, $col_qty, -text => &commai($vol)." x".$Post, @o_r); 
+					$w1->itemCreate($p, $col_cost, -text => &comma($price).$Post, @o_r); 
+					$w1->itemCreate($p, $col_age, -text => &age2s($when).$Post, @o_r); 
+					$w1->hide('entry', $p);
+				} elsif ($n_ignores == $kIgnoresHideAfter+1) {
+					$w1->add($p, -text => '');
+					$w1->itemCreate($p, $col_route,  -text => '---'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_profit, -text => '---  '.$Post, @o_r); 
+					$w1->itemCreate($p, $col_qty,    -text => '----'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_cost,   -text => '---'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_age,    -text => '---'.$Post, @o_r); 
+					$w1->hide('entry', $p);
+				} elsif ($n_ignores > $kIgnoresHideAfter+1) {
+					### skip
+				}					
 
-				$w1->add($p, -text => '');
-				$w1->itemCreate($p, $col_route, -text => &where2s($Data{$r}{$i}{From}).$Post, @o_r); 
-				$w1->itemCreate($p, $col_profit, -text => 'ask  '.$Post, @o_r); 
-				$w1->itemCreate($p, $col_qty, -text => &commai($vol)." x".$Post, @o_r); 
-				$w1->itemCreate($p, $col_cost, -text => &comma($price).$Post, @o_r); 
-				$w1->itemCreate($p, $col_age, -text => &age2s($when).$Post, @o_r); 
-				$w1->hide('entry', $p);
 			}
 
 			### UI line: Bids
+			$n_ignores = 0;
 			foreach my $bid (@{$Data{$r}{$i}{Bids}}) {
-				my ($price, $vol, $flag_ignore, $when) = split(':', $bid);
-				my $n = join(':', 'bid', $price, $vol, $when);
+				my ($price, $vol, $flag_ignore, $when, $orderID) = split(':', $bid);
+				my $where = $Data{$r}{$i}{To};
+				my $n = join(':', 'bid', $price, $vol, $when, $orderID);
 				my $p = $r.$Sep.$i.$Sep.$n;
 				#print "add bid $r.$items_name{$i}.$n  $price x $vol\n";
 
@@ -2548,17 +2804,35 @@ sub repop {
 				my @o_l = @opts_l;
 				my @o_r = @opts_r;
 				if ($Data{$r}{$i}{Ignore} || $flag_ignore) {
+					$n_ignores++;
 					@o_l = @opts_ignore_l;
 					@o_r = @opts_ignore_r;
 				}
+				### check for duplicate order
+				if ($w1->infoExists($p)) {
+					print(&time2s.">>> duplicate order: $p at ".&time2s($when)."\n");
+					next;
+				}
 
-				$w1->add($p, -text => '');
-				$w1->itemCreate($p, $col_route, -text => &where2s($Data{$r}{$i}{To}).$Post, @o_r); 
-				$w1->itemCreate($p, $col_profit, -text => 'bid  '.$Post, @o_r); 
-				$w1->itemCreate($p, $col_qty, -text => &commai($vol)." x".$Post, @o_r); 
-				$w1->itemCreate($p, $col_cost, -text => &comma($price).$Post, @o_r); 
-				$w1->itemCreate($p, $col_age, -text => &age2s($when).$Post, @o_r); 
-				$w1->hide('entry', $p);
+				if ($n_ignores == 0 or $n_ignores < $kIgnoresHideAfter+1) {
+					$w1->add($p, -text => '');
+					$w1->itemCreate($p, $col_route, -text => &where2s($where), @o_r); 
+					$w1->itemCreate($p, $col_profit, -text => 'bid  '.$Post, @o_r); 
+					$w1->itemCreate($p, $col_qty, -text => &commai($vol)." x".$Post, @o_r); 
+					$w1->itemCreate($p, $col_cost, -text => &comma($price).$Post, @o_r); 
+					$w1->itemCreate($p, $col_age, -text => &age2s($when).$Post, @o_r); 
+					$w1->hide('entry', $p);
+				} elsif ($n_ignores == $kIgnoresHideAfter+1) {
+					$w1->add($p, -text => '');
+					$w1->itemCreate($p, $col_route,  -text => '---'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_profit, -text => '---  '.$Post, @o_r); 
+					$w1->itemCreate($p, $col_qty,    -text => '----'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_cost,   -text => '---'.$Post, @o_r); 
+					$w1->itemCreate($p, $col_age,    -text => '---'.$Post, @o_r); 
+					$w1->hide('entry', $p);
+				} elsif ($n_ignores > $kIgnoresHideAfter+1) {
+					### skip
+				}
 			}
 		} ### end item
 		
@@ -2679,7 +2953,7 @@ sub save_state {
 			my @p_orders = $w1->infoChildren($pi);
 			foreach my $po (@p_orders) {
 				$State_mode{$po} = $w1->getmode($po);
-			}
+			}1
 		}
 	}
 
@@ -2726,8 +3000,8 @@ sub redraw {
 
 my $last_req = '';
 sub export_crest_reqs {
-	my $fname = 'eve-trade-crest-reqs.txt';
-	my $age_old = 15 + 300; ### crest files are backdated by 5 mins
+	my $fname = $fname_crest_reqs; 
+	my $age_old = 20 + 300; ### crest files are backdated by 5 mins
 	
 	### TODO: separate data by source
 	### 1. game export (trumps for 5m)
@@ -2815,7 +3089,7 @@ sub import_game_file {
 		my $ignore = 0;
 
 		### skip if minimum volume (scam)
-		#if ($minVolume > 1) { next; }
+		if ($minVolume > 1) { next; }
 
 		### keep all hub station orders + regional buy orders
 		my $hubSys = &hub2sys($fileHubStnFullname);
@@ -2825,7 +3099,8 @@ sub import_game_file {
 		    ($isBid eq 'True' and $range > -1 and $orderSystemID == $hubSys) or	### same-system buy order
 		    ($isBid eq 'True' and $jumps <= $range)				### in-range buy order (if jumps known)
 		   ) { 
-			my $tuple = join(':', ($price, $vol, $ignore, $when));
+		   	### construct order
+			my $tuple = join(':', ($price, $vol, $ignore, $when, $orderID));
 			if ($bidask eq 'bid') {
 				push(@bids, $tuple); $n_orders++;
 			} else {
