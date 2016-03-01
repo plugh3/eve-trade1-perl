@@ -261,9 +261,11 @@ sub import_item_db {
 	my $username = "dev";
 	my $password = "BNxJYjXbYXQHAvFM";
 	my $db_params = "DBI:mysql:database=evesdd;host=127.0.0.1;port=3306";
-	my $dbh = DBI->connect($db_params, $username, $password);
+	my $dbh = DBI->connect($db_params, $username, $password);
+
 	my $sth = $dbh->prepare("SELECT typeID, typeName, volume FROM invtypes");
-	$sth->execute();	while (my $ref = $sth->fetchrow_hashref()) {
+	$sth->execute();
+	while (my $ref = $sth->fetchrow_hashref()) {
 		#print "Found a row: id=$ref->{'typeID'}, name=$ref->{'typeName'}, size=$ref->{'volume'}\n";
 
 		my $id =   $ref->{'typeID'};
@@ -272,7 +274,8 @@ sub import_item_db {
 		$itemDB{$id} = join('~',$name,$id,$size);
 		$items_name{$id} = $name;
 		$items_size{$id} = ($size > 0) ? ($size) : 0.01;
-		$items_old{$id} = 1;	}
+		$items_old{$id} = 1;
+	}
 	$sth->finish();
 	$dbh->disconnect();
 
@@ -599,7 +602,8 @@ sub parse_orders {
 		if ( exists $itemDB{$id} ) {
 			if ($name ne $items_name{$id}) {
 				#print ">>> converting item name \"$items_name{$id}\" from \"$name\"\n";
-				$name = $items_name{$id};					}
+				$name = $items_name{$id};		
+			}
 			
 			### NOTE: Perl references are weird.
 			### Passing "\@{$Bids{$id}}" to fn always works.
@@ -1304,14 +1308,16 @@ while (1) {
 	&import_market_db;
 
 
-
-
+
+
+
 	$time_fetchall = 0;
 	&timer_start("fetchall");
 
 	$time_getall = 0;
 	&timer_start("getall");
-	### get html
+
+	### get html
 	my $fetch_time = time;
 	my $async = HTTP::Async->new;
 	my @cycle = shuffle(@routes);
@@ -1321,18 +1327,22 @@ while (1) {
 		$async->add( HTTP::Request->new( GET => $url ) );
 	}
 	my @html_responses = ();
-	while ( $async->not_empty ) {		my $response = $async->wait_for_next_response();
+	while ( $async->not_empty ) {
+		my $response = $async->wait_for_next_response();
 		if ($response->is_success) {
 			my $html = $response->content;
 			push(@html_responses, $html);
 		} else {
 			### failed response
 			&error("\$html_orders empty, url=".$response->base); 
-			warn ">>> parse error";			}
-	}	$time_getall = &timer_stop("getall");
+			warn ">>> parse error";	
+		}
+	}
+	$time_getall = &timer_stop("getall");
 
 
-	### parse html	$time_parseall = 0;
+	### parse html
+	$time_parseall = 0;
 	&timer_start("parse_all");
 	$html_size_pass = 0;
 	foreach my $html (@html_responses) {
@@ -1346,12 +1356,12 @@ while (1) {
 
 	&export_market_db;
 
-	### populate Cargos[]
+	### populate Cargos[]
 	foreach my $r (@routes) {
 		my ($from_id, $to_id) = @$r;
 		my $loc_from = &loc_i2n($from_id);
 		my $loc_to = &loc_i2n($to_id);
-		my $deals_ref = &match_orders($loc_from, $loc_to);
+		my $deals_ref = &match_orders($loc_from, $loc_to);
 		if (! $deals_ref) { next; }
 		my $cargo = &pick_cargo($deals_ref);
 		$Cargos{$loc_from}{$loc_to} = $cargo;
@@ -1401,12 +1411,13 @@ while (1) {
 	print sprintf("%6.1f", $time_get/1000000.0). "s GET()\n";	$time_get = 0;
 
 
-
+
 
 	### min delay between loops ($loop_min + rand($loop_rdm))
 	my $loop_min = 60;
 	my $loop_rdm = 0;
-	my $now = time;
+
+	my $now = time;
 	my $last_elapsed = $now - $last_loop;
 	$last_loop = $now;
 
