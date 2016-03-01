@@ -4,9 +4,13 @@ use 5.010;
 use strict;
 use warnings;
 
-use Clipboard;
+#use Clipboard;
+use Config;
 use DBI;
 use Fcntl qw(:DEFAULT :flock);
+#use constant LOCK_SH => 1;
+#use constant LOCK_EX => 2;
+#use constant LOCK_UN => 8;
 use List::Util qw (shuffle);
 use LWP::Simple;
 use Time::HiRes qw (gettimeofday);
@@ -21,6 +25,41 @@ use Tk::Font;
 use Tk::ProgressBar;
 
 
+### TODO: spawn processes on OSX
+
+my $cargo_filename = "data-sky2dash.txt";
+my $my_data_filename = "data-dash.txt";
+
+=begin
+my %dir_marketlogs_by_os = (
+	"darwin" => "/Users/csserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs",
+	"MSWin32" => "C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs"
+);
+my $dir_marketlogs = $dir_marketlogs_by_os{$Config{osname}};
+=cut
+
+
+### OS-specific stuff
+my $dir_sep;
+my $dir_home;
+my $dir_marketlogs;
+if      ($Config{osname} eq "darwin") {
+	$dir_sep = '/';
+	$dir_home = $ENV{'HOME'};
+	$dir_marketlogs = $dir_home.'/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
+} elsif ($Config{osname} eq "MSWin32") {
+	$dir_sep = "\\";
+	$dir_home = $ENV{'HOMEDRIVE'}.$ENV{'HOMEPATH'};
+	$dir_marketlogs = $dir_home.'\Documents\EVE\logs\Marketlogs';
+} else {	
+	die ">>> unknown OS type \"$Config{osname}\"";
+} 
+
+
+
+### main window
+my $mw = MainWindow->new(-title => 'Tree');
+$mw->geometry("850x650");
 
 
 ### start local mysqld
@@ -72,6 +111,27 @@ $pid_skynet = substr($pid_skynet, 1);
 #print "pid_skynet $pid_skynet\n";
 
 
+
+my $textbox = $mw->Text(); # never packed
+sub copy2clipboard {
+	my ($x) = @_;
+	# do stuff
+
+	### Plan B
+	$textbox->clipboardClear;
+	$textbox->clipboardAppend($x);
+
+
+	### Plan A
+	#$textbox->clipboardClear;
+    #$textbox->delete('1.0', 'end');
+    #$textbox->insert('end', $x);
+    #$textbox->selectAll;
+    #this next line must come after the selectAll      
+    #$textbox->delete('end - 1 chars', 'end');
+    #$textbox->clipboardColumnCopy;      
+}
+
 sub my_beep {
 	### beep
 	print "\07";
@@ -112,12 +172,8 @@ my $notify_threshold_age = 60*60;		### 20 min
 my $minProfitPerSize = 2000;			### $/m3
 my $minProfit = 3*1000000;			### $2.0M/item
 my $total_cost_threshold = 4*1000000000;
-my $cargo_filename = "eve-trade-cargo.txt";
-my $my_data_filename = "eve-trade-dashboarddata.txt";
 
 ### UI config
-my $mw = MainWindow->new(-title => 'Tree');
-$mw->geometry("850x650");
 my $Pre = ' ';
 my $Post = ' ';
 my $Sep = '~'; ### separator used for pathnames (route/item/bid)
@@ -301,7 +357,7 @@ sub copy2clip_iterate {
 			$p_cycle = $p_items[$i2];
 			my ($r2, $id2) = split($Sep, $p_cycle);
 			### copy to clipboard
-			Clipboard->copy($items_name{$id2});
+			copy2clipboard($items_name{$id2});
 			### beep
 			&my_beep();
 
@@ -957,7 +1013,7 @@ my $menucmd_copy_item = ['command', 'Copy item', -command => sub {
 	### ARG: $This
 	my $i = &is_item($This);
 	if (! $i) { return 0; }
-	Clipboard->copy($items_name{$i});
+	copy2clipboard($items_name{$i});
 }];
 sub fn_iterative_copy {
 	my ($p) = @_;
@@ -973,7 +1029,7 @@ sub fn_iterative_copy {
 	}
 
 	my ($r2, $id2) = split($Sep, $p_cycle);
-	Clipboard->copy($items_name{$id2});
+	copy2clipboard($items_name{$id2});
 	&my_beep();
 	&redraw();
 }
@@ -1721,7 +1777,7 @@ sub route2clipboard {
 		$text.= "  bid ".&comma($bid_lo)." x $bid_qty$eol"; ### lowest profitable bid price
 	}
 	
-	Clipboard->copy($text);
+	copy2clipboard($text);
 }
 
 
@@ -2731,14 +2787,16 @@ sub import_game_file {
 	my ($fname, $fileTime) = @_;
 	#print "import_game_file() $fname\n";
 
+	my $ex_fname = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs/Domain-Medium Pulse Laser Specialization-2016.02.10 194937.txt';
+	#my $dir_marketlogs = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
+	$fname =~ /^$dir_marketlogs\/(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
 
-	$fname =~ /^C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
 	my $fileRegName = $+{region};
 	my $fileHubStnFullname = &reg2hub($fileRegName);
 	my $fileItem = &item_fname2iname( $+{item} );
 	my $id = $items_id{$fileItem};
 	#$fileTime = &fname2time($fname); ### override system modtime with evetime
-	#print &time2s()." import() ".sprintf("%-13s", "[".$fileReg."]")." $fileItem\n";
+	#print &time2s()." import() ".sprintf("%-13s", "[".$fileRegName."]")." $fileItem\n";
 
 	### Pass 1: parse marketlog file into bids[] and asks[]
 	my @bids = ();
@@ -2864,11 +2922,11 @@ my %lastImports = ();
 sub import_from_game {
 	#print "refresh_game_data()\n";
 
-	my $dirname = 'C:\Users\csserra\Documents\EVE\logs\Marketlogs';
+	my $dirname = $dir_marketlogs;
 	#my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$modtime,$ctime,$blksize,$blocks) = stat($dirname);
-	#print ">>> directory last modified ".&time2s($modtime)."\n";
+	#print ">>> directory last modified ".&time2s($modtime)." >$dirname<\n";
 	my $DIR;
-	opendir($DIR, $dirname) or die "directory.open failed: $dirname";
+	opendir($DIR, $dirname) or die "directory.open failed: >$dirname<";
 
 	my %Exports = ();
 	#my @files = grep { ($_ ne '.') and ($_ ne '..') } readdir($DIR);
@@ -2879,7 +2937,7 @@ sub import_from_game {
 	### purge older files
 	foreach my $fname (@files) {
 		if ($fname =~ /^(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/) {
-			my $fname_full = $dirname.'\\'.$fname;
+			my $fname_full = $dirname.$dir_sep.$fname;
 			#if ( $empty_game_files{$fname2} ) { next; }
 			my $reg = $+{region};
 			my $item = &item_fname2iname( $+{item} );

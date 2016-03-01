@@ -71,7 +71,7 @@ my $itemDBfilename = "eve-trade-itemdb.txt";
 my $market_db_filename = "eve-trade-marketdb.txt";
 my $market_db_filename2 = "eve-trade-marketdb2.txt";
 my $get_log_fname = "eve-trade-log-gets.txt";
-my $cargo_filename = "eve-trade-cargo.txt";
+my $cargo_filename = "data-sky2dash.txt";
 
 
 my %items_ignore = (

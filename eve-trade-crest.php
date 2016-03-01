@@ -12,7 +12,28 @@ $client = new iveeCrest\Client(
     iveeCrest\Config::getUserAgent(),
     iveeCrest\Config::getClientRefreshToken()
 );
-$export_prefix = 'C:\\Users\\csserra\\Documents\\EVE\\logs\\Marketlogs\\';
+
+// primer
+//echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n"; // print
+//$item_fname2iname = array('k1' => 'v1', 'k2' => 'v2'); // hash
+//iterator
+//concat
+
+// OS-specific stuff
+//$dir_export = '/Users/csserra/Library/Application\ Support/EVE\ Online/p_drive/User/My\ Documents/EVE/logs/Marketlogs/';
+switch (strtolower(php_uname("s"))) {
+    case "darwin":
+        $dir_home = getenv("HOME");
+        $dir_export = $dir_home.'/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs/';
+        break;
+    case "windows nt":
+        $dir_home = getenv("HOMEDRIVE").getenv("HOMEPATH");
+        $dir_export = $dir_home.'\\Documents\\EVE\\logs\\Marketlogs\\';
+        break;
+    default:
+        echo ">>> unknown OS type ".php_uname("s")."\n";
+        exit;
+}        
 
 
 //instantiate an endpoint handler
@@ -211,7 +232,7 @@ while (1)
               //echo "\x07"; # beep
               //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             },
-			false
+			false // disable caching for getMultiMarketOrders() call (reduce memory)
         ); // end getMultiMarketOrders() call
         echo "done\n";
       }
@@ -229,7 +250,7 @@ while (1)
             $fname2 = getExportFilename($row);
 
             $n = count(explode("\n", $text))-1;
-            $fname_short = substr($fname2, strpos($fname2, $export_prefix) + strlen($export_prefix));
+            $fname_short = substr($fname2, strpos($fname2, $dir_export) + strlen($dir_export));
             //echo time2s()."export (x$n) $fname_short\n";
 
             $exportQueue[$fname2] = $text;
@@ -262,26 +283,28 @@ function getExportFilename($row)
 {
     global $sep;
     global $item_iname2fname;
-    global $export_prefix;
+    global $dir_export;
 
+    // region
     list($reg_id, $fname_region, $item_id, $fname_item, $is_bid) = explode($sep, $row);
 
-    // construct export filename
-    //$fname_region2 = $handler->getRegion($reg_id)->name;
-    $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
+    // item
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
     if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
     $fname_item = str_replace("/", "_", $fname_item); // hacky
     $fname_item = str_replace(":", "_", $fname_item); // hacky
 
-    $fname2 = $export_prefix.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
+    // time
+    $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
+
+    $fname2 = $dir_export.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
     return $fname2;        
 }
 function export($fname, $text)
 {
-    global $export_prefix;
+    global $dir_export;
 
-    $fname_short = substr($fname, strpos($fname, $export_prefix) + strlen($export_prefix));
+    $fname_short = substr($fname, strpos($fname, $dir_export) + strlen($dir_export));
     $n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
     $fname_short2 = $match[1];
     //echo time2s()."crest-php.export() \"$fname_short2\"\n";
