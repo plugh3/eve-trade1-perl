@@ -985,11 +985,6 @@ sub notify_color {
 }	
 
 
-
-
-my $p_cycle = '';
-my $p_cycle_first;
-
 sub pick_color {
 	my ($p_item, $x) = @_;
 	if (&is_item($p_item) && ! $x) { 
@@ -1027,51 +1022,6 @@ my $menucmd_copy_item = ['command', 'Copy item', -command => sub {
 }];
 
 
-sub copy2clip_iterate {
-	print &time2s()." copy2clip_iterate()\n";
-
-	my $r = &get_route($p_cycle);
-	my @p_items = $w1->infoChildren($r);
-	my $n = 0+@p_items;
-	foreach my $i (0..$n-1) {
-		my $p = $p_items[$i];
-		my ($r, $id) = split($Sep, $p);
-		if ($id eq 'TOTAL') { last; }
-		if ($Data{$r}{$id}{Ignore}) { next; }
-		if ($p eq $p_cycle) { 
-			### advance iterator
-			my $i2 = &next_item(\@p_items, $i);
-			$p_cycle = $p_items[$i2];
-			my ($r2, $id2) = split($Sep, $p_cycle);
-			### copy to clipboard
-			Clipboard->copy($items_name{$id2});
-			### beep
-			&my_beep();
-
-			redraw();
-			last;
-		}
-	}
-	
-
-}
-sub next_item {
-	my ($aref, $i1) = @_;
-	my @p_items = @{$aref};
-	my $n = 0+@p_items;
-	my $i2 = $i1;
-
-	while (1) {
-		$i2 = ($i2 + 1) % $n;
-		my $p = $p_items[$i2];
-		my ($r, $id) = split($Sep, $p);
-		if ($i2 == $i1) { return $i2;}  ### avoids infinite loop, but could return original $i1
-		if ($id eq 'TOTAL') { next; }
-		if ($Data{$r}{$id}{Ignore}) { next; }
-		print "next_item($i1) => \#$i2 $items_name{$id}\n";
-		return $i2;
-	}
-}
 sub get_route {
 	my ($p) = @_;
 	while ($p && ! &is_route($p)) {
