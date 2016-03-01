@@ -1,4 +1,4 @@
-#!C:\Dwimperl\perl\bin\perl.exe
+#!perl
 
 use 5.010;
 use strict;
