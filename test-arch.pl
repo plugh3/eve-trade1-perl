@@ -3,6 +3,10 @@ use Config;
 print ">>> osname   >".$Config{osname}."<\n";
 print ">>> archname >".$Config{archname}."<\n";
 
+while (($k, $v) = each %Config) {
+	print ">>>    Config{\"$k\"} $v\n";
+}
+
 =begin
 	my $fname = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs/Domain-Medium Pulse Laser Specialization-2016.02.10 194937.txt';
 	my $marketlogs_dir = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
