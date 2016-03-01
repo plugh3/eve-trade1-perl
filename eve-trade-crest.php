@@ -210,7 +210,8 @@ while (1)
               echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
               //echo "\x07"; # beep
               //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
-            }
+            },
+			false
         ); // end getMultiMarketOrders() call
         echo "done\n";
       }
