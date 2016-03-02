@@ -125,12 +125,17 @@ while (1)
 {
     $fnameReqsShort = $fname_crest_reqs;
     $fnameReqs = __DIR__.'/'.$fnameReqsShort;
-    // check if request file has been updated
-    clearstatcache();
 	while (!file_exists($fnameReqs)) { sleep(1); }
-    $mtime = filemtime($fnameReqs);
-    while ($mtime <= $last) { sleep(1); } 
-    
+
+    // wait for request file update
+    clearstatcache();
+	$mtime = filemtime($fnameReqs);
+    while ($mtime <= $last) { 
+		sleep(1); 
+		clearstatcache();
+		$mtime = filemtime($fnameReqs);
+	} 
+
     
     // import request file => rowsRaw[]
     $fh = fopen($fnameReqs, 'r') or die("Failed to open $fname");
