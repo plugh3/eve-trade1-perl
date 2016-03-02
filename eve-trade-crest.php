@@ -1,18 +1,6 @@
 <?php
 
 
-//initialize iveeCrest. Adapt path as required.
-require_once(__DIR__.'/iveeCrestInit.php');
-
-//instantiate the CREST client, passing the configured options
-$client = new iveeCrest\Client(
-    iveeCrest\Config::getCrestBaseUrl(),
-    iveeCrest\Config::getClientId(),
-    iveeCrest\Config::getClientSecret(),
-    iveeCrest\Config::getUserAgent(),
-    iveeCrest\Config::getClientRefreshToken()
-);
-
 // primer
 //echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n"; // print
 //$item_fname2iname = array('k1' => 'v1', 'k2' => 'v2'); // hash
@@ -22,10 +10,12 @@ $client = new iveeCrest\Client(
 // OS-specific stuff
 switch (strtolower(php_uname("s"))) {
     case "darwin":
+		$dir_sep = "/";
         $dir_home = getenv("HOME");
         $dir_export = $dir_home.'/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs/';
         break;
     case "windows nt":
+		$dir_sep = "\\";
         $dir_home = getenv("HOMEDRIVE").getenv("HOMEPATH");
         $dir_export = $dir_home.'\\Documents\\EVE\\logs\\Marketlogs\\';
         break;
@@ -34,28 +24,32 @@ switch (strtolower(php_uname("s"))) {
         exit;
 }        
 $fname_crest_reqs = 'data-dash2crest.txt';
+$fname_cache = 		'cache-ivee.txt';
 
 
+//initialize iveeCrest. Adapt path as required.
+require_once(__DIR__.$dir_sep.'iveeCrestInit.php');
+//instantiate the CREST client, passing the configured options
+$client = new iveeCrest\Client(
+    iveeCrest\Config::getCrestBaseUrl(),
+    iveeCrest\Config::getClientId(),
+    iveeCrest\Config::getClientSecret(),
+    iveeCrest\Config::getUserAgent(),
+    iveeCrest\Config::getClientRefreshToken()
+);
 //instantiate an endpoint handler
 $handler = new iveeCrest\EndpointHandler($client);
 
+
 // prime cache
-$fnameCache = __DIR__.'/cache-ivee.txt';
+$fnameCache = __DIR__.$dir_sep.$fname_cache;
 $client->importCache($fnameCache);
 //$client->getEndpoint();
 $handler->getRegions();
 $handler->getMarketTypeHrefs();
 $client->exportCache($fnameCache);
+// good to go
 
-// ready to go
-
-/*
-// iveeeCrest sample code
-//gather all item groups (multipage response is gathered automatically)
-$handler->getItemGroups();
-//get regions endpoint
-$handler->getRegions();
-*/
 
 // maps file name => item name
 $item_fname2iname = array(
@@ -92,17 +86,6 @@ $item_iname2fname = array();
 foreach ($item_fname2iname as $fname => $iname) {
   $item_iname2fname[$iname] = $fname;
 }
-// maps item name => file name
-/*
-$item_iname2fname = array(
-	'GDN-9 "Nightstalker" Combat Goggles' => 'GDN-9 Nightstalker Combat Goggles',
-	'Odin Synthetic Eye (left/gray)' => 'Odin Synthetic Eye (left_gray)',
-	'SPZ-3 "Torch" Laser Sight Combat Ocular Enhancer (right/black)' => 'SPZ-3 Torch Laser Sight Combat Ocular Enhancer (right_black)',
-	'Public Portrait: How To' => 'Public Portrait_ How To',
-  'Men\'s \'Ascend\' Boots (brown/gold)' => 'Men\'s \'Ascend\' Boots (brown_gold)',
- 	'Beta Reactor Control: Shield Power Relay I' => 'Beta Reactor Control_ Shield Power Relay I',
-);
-*/
 
 $sep = '~';
 
@@ -269,7 +252,7 @@ while (1)
       export($fname2, $text);
     }
     
-    //echo time2s()."sleeping 60 secs...\n";
+    #echo time2s()."sleep 1 sec\n";
     sleep(1);
 }
 function url2item($url)

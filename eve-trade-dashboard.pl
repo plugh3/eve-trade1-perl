@@ -37,14 +37,17 @@ my $my_data_filename = 		"data-dash-all.txt";
 my $fname_crest_reqs = 		"data-dash2crest.txt";
 
 ### OS-specific stuff
+my $eol;
 my $dir_sep;
 my $dir_home;
 my $dir_marketlogs;
 if      ($Config{osname} eq "darwin") {
+	$eol = "\r\n";
 	$dir_sep = '/';
 	$dir_home = $ENV{'HOME'};
 	$dir_marketlogs = $dir_home.'/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
 } elsif ($Config{osname} eq "MSWin32") {
+	$eol = "\n";
 	$dir_sep = "\\";
 	$dir_home = $ENV{'HOMEDRIVE'}.$ENV{'HOMEPATH'};
 	$dir_marketlogs = $dir_home.'\Documents\EVE\logs\Marketlogs';
@@ -104,8 +107,8 @@ $pid_crest = substr($pid_crest, 1);
 my $pid_skynet = fork;
  if (!$pid_skynet) {
 	### skynet (evecentral + marketlogs gets)
-	system("start run-skynet.bat"); ## new window, persist after die (DEBUG)
-	#system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
+	#system("start run-skynet.bat"); ## new window, persist after die (DEBUG)
+	system("start perl eve-trade-j2a-v5-skynet.pl"); ## new window
 	exit;
 }
 $pid_skynet = substr($pid_skynet, 1);
@@ -1690,7 +1693,6 @@ sub route2clipboard {
 	my ($from_s, $to_s) = ($1, $2);
 		
 	my $text = '';
-	my $eol = "\r\n";
 	
 	### force recalc(), which filters out unprofitable bid/ask orders
 	&redraw();
@@ -2857,7 +2859,7 @@ sub restore_state {
 		if ($w1->infoExists($p)) {
 			$w1->selectionSet($p);
 			&highlight_return_route_cmd($p);
-			print ">>> selection set \"$p\"\n";
+			#print ">>> selection set \"$p\"\n";
 		}
 	}
 	@State_selection = ();
@@ -2991,7 +2993,7 @@ sub import_game_file {
 	if ($n_orders == 0) { 
 		### this is not a fail state
 		### the fact that there are zero bids/asks is valid data
-		print &time2s()." import_game_file(): empty marketlog file ".sprintf("%12s", "[".$fileRegName."]")." $fileItem\n";
+		#print &time2s()." import_game_file(): empty marketlog file ".sprintf("%12s", "[".$fileRegName."]")." $fileItem\n";
 	}
 
 	### Pass 2: sort into bidsSorted[] and askSorted[]
