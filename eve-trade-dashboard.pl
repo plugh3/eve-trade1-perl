@@ -1022,16 +1022,6 @@ my $menucmd_copy_item = ['command', 'Copy item', -command => sub {
 }];
 
 
-sub get_route {
-	my ($p) = @_;
-	while ($p && ! &is_route($p)) {
-		$p = $w1->infoParent($p);
-	}
-	return $p;
-}
-
-
-
 sub fn_iterative_copy {
 	my ($p) = @_;
 	if (! $p) { $p = $This; }
@@ -3011,9 +3001,10 @@ sub import_game_file {
 	my ($fname, $fileTime) = @_;
 	#print "import_game_file() $fname\n";
 
-	my $ex_fname = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs/Domain-Medium Pulse Laser Specialization-2016.02.10 194937.txt';
-	#my $dir_marketlogs = '/Users/cserra/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
-	$fname =~ /^$dir_marketlogs\/(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
+	### parse filepath
+	my $dir_esc = $dir_marketlogs.$dir_sep;
+	$dir_esc =~ s/\\/\\\\/g;
+	$fname =~ /^$dir_esc(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
 
 	my $fileRegName = $+{region};
 	my $fileHubStnFullname = &reg2hub($fileRegName);
