@@ -1380,6 +1380,7 @@ my %Hubs = (
 	$stn_dodixie => "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
 	$stn_rens => "Rens VI - Moon 8 - Brutor Tribe Treasury",
 );
+my %Hubs2 = %Hubs; ### copy for double iterators
 
 my %stn2sys = (
 	$stn_amarr => $sys_amarr,
@@ -1851,13 +1852,10 @@ sub addTrade {
 }
 
 ### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
+my $blast_last = 0;
+my $blast_period = 300;
 sub import_from_server {
 	print &time2s()." import_from_server()\n";
-
-	### reset
-	%Bids = ();
-	%Asks = ();
-	my %kludge = ();
 
 	my $FH;
 	if(not open($FH, '<:crlf', $cargo_filename)) {
@@ -1865,69 +1863,49 @@ sub import_from_server {
 		return;
 	}
 
+=begin
 	### workaround: wait until cargo file is ready
 	while (not open($FH, '<:crlf', $cargo_filename)) {
 		print &time2s()."fopen() \"$cargo_filename\" failed\n";
 		sleep 1;
 	}
+=cut
+
+	### populate Data[] with trade candidates (route x item)
+	### this triggers Crest calls for each
+	### does NOT import order details (price, vol, etc.) from evecentral
 	flock($FH, LOCK_SH);
-	my $latest = 0;
-	
-	### populate Bids/Asks[] from cargo_filename
 	while (<$FH>) {
 		### FORMAT for market_db
-		my ($where, $id, $bidask, $price, $vol, $rem, $when, $other_loc) = split(':'); chomp $other_loc;
-		my ($from, $to) = ($bidask eq 'ask') ? ($where, $other_loc) : ($other_loc, $where);
+		my ($loc1, $id, $orderType, $price, $vol, $rem, $when, $loc2) = split(':'); chomp $loc2;
+		my ($from, $to) = ($orderType eq 'ask') ? ($loc1, $loc2) : ($loc2, $loc1);
 		my $r = &locs2r($from, $to);
-		$latest = &max($latest, $when);
 
-		### if item_id is not in DB, this isn't going to work (skip)
+		### skip if itemID is not in itemDB
 		if (! $items_name{$id}) { next; }
 
-		### initialize hashes
-		if (! $Bids{$where})    {$Bids{$where}   = ();}
-		if (! $Asks{$where})    {$Asks{$where}   = ();}
-		if (! $kludge{$where})  {$kludge{$where} = ();}
+		### option A: original route + alternate src hubs (6) + alternate dst hubs (6) = 13
+		foreach my $hub (values %Hubs) {
+			### alternate src hubs
+			if ($hub ne $to) { addTrade(&locs2r($hub, $to), $id); }
+			### alternate dst hubs
+			if ($hub ne $from) { addTrade(&locs2r($from, $hub), $id); }
+		}
 
-		### debug
-		my $t = "";
-		$t .= $items_name{$id}." ";
-		$t .= $bidask." ";
-		$t .= "\$".&comma($price)." ";
-		$t .= "x $vol ";
-		$t .= &ago($when)." ";
-		$t .= &where2s($where);
-		#print $t."\n";
-
-		my $flag_ignore = 0;
-		### construct order
-		my $tuple = join(':', ($price, $vol, $flag_ignore, $when, 'evecentral'));
-		if ($bidask eq 'ask') {
-			push(@{$Asks{$where}{$id}}, $tuple);
-		} else {
-			push(@{$Bids{$where}{$id}}, $tuple);
-			$kludge{$where}{$id} = $other_loc;
+		### option B: include all hub permutations = 56 (5.25x)
+		### only use this periodically
+		if ( time - $blast_last > $blast_period ) {
+			print &time2s()." >>> BLAST!\n";
+			foreach my $hub (values %Hubs) {
+				foreach my $hub2 (values %Hubs2) {
+					if ($hub ne $hub2) { addTrade(&locs2r($hub, $hub2), $id); }
+				}
+			}
+			$blast_last = time; ### reset cooldown
 		}
 	}
 	close $FH;
 
-	### populate Data[] from Bids/Asks
-	### sort bids/asks by route + item
-	my $when = $latest;
-	### "bid_loc", "ask_loc" isa station longname
-	foreach my $bid_loc (keys %kludge) {
-		foreach my $id (keys %{$kludge{$bid_loc}}) {
-			my $ask_loc = $kludge{$bid_loc}{$id};
-					
-			### include alternate src/dst hubs
-			foreach my $hub (values %Hubs) {
-				if ($hub ne $bid_loc) { addTrade(&locs2r($hub, $bid_loc), $id); }
-				if ($hub ne $ask_loc) { addTrade(&locs2r($ask_loc, $hub), $id); }
-			}
-			
-			### do NOT import detailed order data from evecentral
-		}
-	}
 	#print &time2s()." import_cargo_lists()\n";
 }
 
