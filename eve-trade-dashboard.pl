@@ -1828,6 +1828,28 @@ sub import_item_db {
 	$dbh->disconnect();
 }
 
+### add Data[] placeholder for a candidate trade (route + item)
+### this triggers Crest queries
+sub addTrade {
+	my ($r, $id) = @_;
+	my ($ask_loc, $bid_loc) = &route2stns($r);
+
+	if ( $Data{$r}{$id} ) { return; } ### de-dup
+
+	### instantiate Data[r][id]
+	$Data{$r}{$id}{From} = $ask_loc;
+	$Data{$r}{$id}{To} = $bid_loc;
+	$Data{$r}{$id}{Route} = $r;
+	$Data{$r}{$id}{Item} = $id;
+	$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
+	$Data{$r}{$id}{Bids} = ();
+	$Data{$r}{$id}{Bids_Reliable} = 0;
+	$Data{$r}{$id}{Bids_Age} = 0;
+	$Data{$r}{$id}{Asks} = ();
+	$Data{$r}{$id}{Asks_Reliable} = 0;
+	$Data{$r}{$id}{Asks_Age} = 0;
+}
+
 ### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
 sub import_from_server {
 	print &time2s()." import_from_server()\n";
@@ -1867,6 +1889,7 @@ sub import_from_server {
 		if (! $Asks{$where})    {$Asks{$where}   = ();}
 		if (! $kludge{$where})  {$kludge{$where} = ();}
 
+		### debug
 		my $t = "";
 		$t .= $items_name{$id}." ";
 		$t .= $bidask." ";
@@ -1891,80 +1914,18 @@ sub import_from_server {
 	### populate Data[] from Bids/Asks
 	### sort bids/asks by route + item
 	my $when = $latest;
+	### "bid_loc", "ask_loc" isa station longname
 	foreach my $bid_loc (keys %kludge) {
-		
 		foreach my $id (keys %{$kludge{$bid_loc}}) {
 			my $ask_loc = $kludge{$bid_loc}{$id};
-			### bid_loc, ask_loc : station longname
+					
+			### include alternate src/dst hubs
+			foreach my $hub (values %Hubs) {
+				if ($hub ne $bid_loc) { addTrade(&locs2r($hub, $bid_loc), $id); }
+				if ($hub ne $ask_loc) { addTrade(&locs2r($ask_loc, $hub), $id); }
+			}
 			
-		
-			### check alternate sources
-			foreach my $from_stn (values %Hubs) {
-				if ($from_stn eq $bid_loc) { next; }
-				my $r = &locs2r($from_stn, $bid_loc);
-
-				### import route parameters from evecentral
-				if (! $Data{$r}{$id} ) {
-					$Data{$r}{$id}{From} = $ask_loc;
-					$Data{$r}{$id}{To} = $bid_loc;
-					$Data{$r}{$id}{Route} = $r;
-					$Data{$r}{$id}{Item} = $id;
-					$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
-					$Data{$r}{$id}{Bids} = ();
-					$Data{$r}{$id}{Bids_Reliable} = 0;
-					$Data{$r}{$id}{Bids_Age} = 0;
-					$Data{$r}{$id}{Asks} = ();
-					$Data{$r}{$id}{Asks_Reliable} = 0;
-					$Data{$r}{$id}{Asks_Age} = 0;
-				}
-			}
-
-			### check alternate destinations
-			foreach my $to_stn (values %Hubs) {
-				if ($to_stn eq $ask_loc) { next; }
-				my $r = &locs2r($ask_loc, $to_stn);
-
-				### add $Data[] placeholders for each route (this triggers evecentral queries)
-				if (! $Data{$r}{$id} ) {
-					$Data{$r}{$id}{From} = $ask_loc;
-					$Data{$r}{$id}{To} = $bid_loc;
-					$Data{$r}{$id}{Route} = $r;
-					$Data{$r}{$id}{Item} = $id;
-					$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
-					$Data{$r}{$id}{Bids} = ();
-					$Data{$r}{$id}{Bids_Reliable} = 0;
-					$Data{$r}{$id}{Bids_Age} = 0;
-					$Data{$r}{$id}{Asks} = ();
-					$Data{$r}{$id}{Asks_Reliable} = 0;
-					$Data{$r}{$id}{Asks_Age} = 0;
-				}
-			}
-		
-
 			### do NOT import detailed order data from evecentral
-			#if (! $Data{$r}{$id}{Bids}) {
-			#	#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
-			#	$Data{$r}{$id}{Bids} = ();
-			#	$Data{$r}{$id}{Bids_Reliable} = 0;
-			#	foreach my $bid (@{$Bids{$bid_loc}{$id}}) {
-			#		if (&dup_order(\@{$Data{$r}{$id}{Bids}}, $bid)) { next; }
-			#		push (@{$Data{$r}{$id}{Bids}}, $bid);
-			#	}
-			#} else { 
-			#	#print ">>> ignoring server bids for $items_name{$id} \[$r\]\n"; 
-			#}
-			### import orders from evecentral, unless we already have order data 
-			#if (! $Data{$r}{$id}{Asks}) {
-			#	#print ">>> adding server bids ($Data{$r}{$id}{Route} :: ".$items_name{$Data{$r}{$id}{Item}}.")\n";
-			#	$Data{$r}{$id}{Asks} = ();
-			#	$Data{$r}{$id}{Asks_Reliable} = 0;
-			#	foreach my $ask (@{$Asks{$ask_loc}{$id}}) {
-			#		if (&dup_order(\@{$Data{$r}{$id}{Asks}}, $ask)) { next; }
-			#		push (@{$Data{$r}{$id}{Asks}}, $ask);
-			#	}
-			#} else { 
-			#	#print ">>> ignoring server asks for $items_name{$id} \[$r\]\n"; 
-			#}
 		}
 	}
 	#print &time2s()." import_cargo_lists()\n";
