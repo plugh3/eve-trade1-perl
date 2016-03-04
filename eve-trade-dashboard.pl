@@ -29,6 +29,9 @@ use Tk::Font;
 use Tk::ProgressBar;
 
 
+my $debugStr = "Gist X-Type Large Shield Booster";
+
+
 
 ### TODO: spawn processes on OSX
 
@@ -62,7 +65,7 @@ if      ($Config{osname} eq "darwin") {
 ### INIT + SPAWN ###
 
 ### wipe data files
-unlink $cargo_filename if (-e $cargo_filename);
+#unlink $cargo_filename if (-e $cargo_filename);
 unlink $my_data_filename if (-e $my_data_filename);
 unlink $fname_crest_reqs if (-e $fname_crest_reqs);
 
@@ -167,6 +170,7 @@ my %Asks;
 my %Notify = ();
 my $N_items;
 my $N_orders;
+my $ntrades_deleted = 0;
 
 
 ### GLOBAL CONSTANTS ###
@@ -894,6 +898,17 @@ sub test_refresh {
 	$test_curr_color = $x;
 }
 
+sub fmtPercent {
+	my ($x, $precision) = @_;
+	if (! $precision) {
+		return sprintf("%i%%", (int($x*100.0)));
+	} else {
+		my $totalDigits = $precision + 2;
+		my $fmt = "%" . $totalDigits . "." . $precision . "f%%";
+		return sprintf($fmt, ($x*100.0));
+	}
+}
+
 ### Notify[]: key is route-item pathname, value is item profit 
 sub notify_refresh {
 	#print &time2s()." notify_refresh()\n";
@@ -901,8 +916,8 @@ sub notify_refresh {
 	
 	my $tag3 = "glow";
 	my $status = &time2s()." -- ";
-	$status .= ($Net_tax == 0.9925) ? "Accounting V, " : "Accounting IV, ";
-	$status .= "$N_items items, $N_orders bids/asks";
+	#$status .= ($Net_tax == 0.9925) ? "Accounting V, " : "Accounting IV, ";
+	$status .= "$N_items trades (".&fmtPercent($ntrades_deleted / ($N_items+$ntrades_deleted), 1)." filtered), $N_orders bids/asks";
 	$status .= "\n";
 	$w_notify->insert('1.0', $status);
 	$w_notify->insert('2.0', "this is a test of glowing\n", [$tag3]);
@@ -1834,14 +1849,15 @@ sub import_item_db {
 ### add Data[] placeholder for a candidate trade (route + item)
 ### this triggers Crest queries
 sub addTrade {
-	my ($r, $id) = @_;
-	my ($ask_loc, $bid_loc) = &route2stns($r);
+	my ($from, $to, $id) = @_;
+	my $r = &locs2r($from, $to);
 
 	if ( $Data{$r}{$id} ) { return; } ### de-dup
 
+	#print &time2s()." addTrade()\n \t$from\n \t$to\n \t$id\n \t$r\n";
 	### instantiate Data[r][id]
-	$Data{$r}{$id}{From} = $ask_loc;
-	$Data{$r}{$id}{To} = $bid_loc;
+	$Data{$r}{$id}{From} = $from;
+	$Data{$r}{$id}{To} = $to;
 	$Data{$r}{$id}{Route} = $r;
 	$Data{$r}{$id}{Item} = $id;
 	$Data{$r}{$id}{Ignore} = $Ignore{$r.$Sep.$id};
@@ -1852,62 +1868,95 @@ sub addTrade {
 	$Data{$r}{$id}{Asks_Reliable} = 0;
 	$Data{$r}{$id}{Asks_Age} = 0;
 }
+sub addTradeAllHubs {
+	my ($id) = @_;
+	#print &time2s()." addTradeAllHubs >$id<\n";
+	foreach my $hub1 (values %Hubs) {
+		foreach my $hub2 (values %Hubs2) {
+			if ($hub1 ne $hub2) { &addTrade($hub1, $hub2, $id); }
+		}
+	}
+}
 
 ### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
 my $blast_last = 0;
 my $blast_period = 300;
-sub import_from_server {
-	print &time2s()." import_from_server()\n";
+#my $blast_period = 1;
+sub import_candidates {
+	print &time2s()." import_candidates()\n";
 
 	my $FH;
 	if(not open($FH, '<:crlf', $cargo_filename)) {
-		print &time2s()." import_from_server(): no cargo file \"$cargo_filename\"\n";
+		print &time2s()." import_candidates(): no cargo file \"$cargo_filename\"\n";
 		return;
 	}
 
-=begin
-	### workaround: wait until cargo file is ready
-	while (not open($FH, '<:crlf', $cargo_filename)) {
-		print &time2s()."fopen() \"$cargo_filename\" failed\n";
-		sleep 1;
+	### option B: include all hub permutations = 56 (5.25x)
+	### use sparingly
+	my $blast = 0;
+	if ( time - $blast_last > $blast_period ) {
+		print &time2s()." >>> blast all hubs\n";
+		$blast = 1;
+		$blast_last = time; ### reset cooldown
 	}
-=cut
 
-	### populate Data[] with trade candidates (route x item)
-	### this triggers Crest calls for each
+
+	### parse trade candidates (route + item) from file
+	### Note: populating Data[r][id] triggers 2x Crest calls, for (r.from x id) and (r.to x id)
 	### does NOT import order details (price, vol, etc.) from evecentral
+	my %itemSet = ();
+	my %tradeSet = ();
 	flock($FH, LOCK_SH);
 	while (<$FH>) {
-		### FORMAT for market_db
+		### format from skynet
 		my ($loc1, $id, $orderType, $price, $vol, $rem, $when, $loc2) = split(':'); chomp $loc2;
+		if (! $items_name{$id}) { print &time2s()." import_candidates() unknown item $id\n"; next; }
 		my ($from, $to) = ($orderType eq 'ask') ? ($loc1, $loc2) : ($loc2, $loc1);
 		my $r = &locs2r($from, $to);
-
-		### skip if itemID is not in itemDB
-		if (! $items_name{$id}) { next; }
-
-		### option A: original route + alternate src hubs (6) + alternate dst hubs (6) = 13
-		foreach my $hub (values %Hubs) {
-			### alternate src hubs
-			if ($hub ne $to) { addTrade(&locs2r($hub, $to), $id); }
-			### alternate dst hubs
-			if ($hub ne $from) { addTrade(&locs2r($from, $hub), $id); }
-		}
-
-		### option B: include all hub permutations = 56 (5.25x)
-		### only use this periodically
-		if ( time - $blast_last > $blast_period ) {
-			print &time2s()." >>> BLAST!\n";
-			foreach my $hub (values %Hubs) {
-				foreach my $hub2 (values %Hubs2) {
-					if ($hub ne $hub2) { addTrade(&locs2r($hub, $hub2), $id); }
-				}
-			}
-			$blast_last = time; ### reset cooldown
-		}
+		$itemSet{$id} = 1;
+		$tradeSet{$r.$Sep.$id} = 1;
 	}
 	close $FH;
+	
+	### pass 2: generate Crest requests
 
+	### nuclear option: add all possible hub routes = 12 (2.5x)
+	### use sparingly
+	if ($blast) { 
+		foreach my $id (keys %itemSet) {
+			&addTradeAllHubs($id); 
+		}
+	} else {
+		### normal option: add alternate src hubs (2) + alternate dst hubs (2) = 5 total
+		foreach my $key (keys %tradeSet) {
+			my ($r, $id) = split($Sep, $key);
+			my ($from, $to) = &route2stns($r);
+
+			### add original route
+			&addTrade($from, $to, $id);
+
+			### add alternate src hubs (2) + alternate dst hubs (2) = 5 total
+			foreach my $hub (values %Hubs) {
+				if ($hub ne $to && $hub ne $from) { 
+					&addTrade($hub,  $to,  $id);  ## alternate src
+					&addTrade($from, $hub, $id);  ## alternate dst
+				}
+			}
+		}
+	}
+	
+	### manual adds
+	my @favorites = (
+		5302, 	## Phased Muon Sensor Disruptor I
+		40519,	## Skill Extractor
+		40520,	## Skill Injector
+	);
+	#print &time2s()." favorites (".(@favorites+0)."): @favorites\n";
+	foreach my $itemID (@favorites) { 
+		#print &time2s()." favorite $itemID\n";
+		&addTradeAllHubs($itemID); 
+	}
+	
 	#print &time2s()." import_cargo_lists()\n";
 }
 
@@ -2249,6 +2298,7 @@ sub recalc {
 	$GrandTotal = 0;
 	$N_items = 0;
 	$N_orders = 0;
+	$ntrades_deleted = 0;
 	### each route (pair: from -> to)
 	foreach my $r (keys %Data) {
 		### each item
@@ -2346,6 +2396,8 @@ sub recalc {
 			if ($Data{$r}{$id}{Profit} < $minProfit) {
 				#print &time2s." >>> skipping $r :: ".$items_name{$id}." (profit=".$Data{$r}{$id}{Profit}.")\n";
 				delete $Data{$r}{$id};
+				$N_items--;
+				$ntrades_deleted++;
 				next;
 			}
 
@@ -2913,7 +2965,8 @@ sub export_crest_reqs {
 	my $nreqs = 0;
 	if (%reqs) {
 		foreach my $reg (sort keys %reqs) {
-			foreach my $item (sort { ($a+0) <=> ($b+0) } keys %{$reqs{$reg}}) {
+			#foreach my $item (sort { ($a+0) <=> ($b+0) } keys %{$reqs{$reg}}) {
+			foreach my $item (sort keys %{$reqs{$reg}}) {
 				foreach my $is_bid (keys %{$reqs{$reg}{$item}}) {
 					if (not $items_name{$item}) { print ">>> missing item name $item\n"; } # CSS
 					$text .= join('~', $reg, $reg_i2n{$reg}, $item, $items_name{$item}, $is_bid)."\n";
@@ -2943,8 +2996,7 @@ sub import_game_file {
 	#print "import_game_file() $fname\n";
 
 	### parse filepath
-	my $dir_esc = $dir_marketlogs.$dir_sep;
-	$dir_esc =~ s/\\/\\\\/g;
+	my $dir_esc = quotemeta($dir_marketlogs.$dir_sep);
 	$fname =~ /^$dir_esc(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/;
 
 	my $fileRegName = $+{region};
@@ -3075,6 +3127,12 @@ sub item_fname2iname {
 	return $item;
 }
 
+sub strip_dir {
+	my ($x) = @_;
+	my @tokens = split(quotemeta($dir_sep), $x);
+	return $tokens[@tokens-1];
+}
+
 my %lastImports = ();
 sub import_from_game {
 	#print "refresh_game_data()\n";
@@ -3085,12 +3143,12 @@ sub import_from_game {
 	my $DIR;
 	opendir($DIR, $dirname) or die "directory.open failed: >$dirname<";
 
-	my %Exports = ();
+	my %Marketlogs = ();
 	#my @files = grep { ($_ ne '.') and ($_ ne '..') } readdir($DIR);
 	my @files = readdir($DIR);
 	closedir($DIR);
 
-	### read marketlog dir into Exports[]
+	### read marketlog directory listing into Marketlogs[]
 	### purge older files
 	foreach my $fname (@files) {
 		if ($fname =~ /^(?<region>[^-]+?)-(?<item>.*)-(?<yr>[0-9]{4})\.(?<mo>[0-9][0-9])\.(?<dy>[0-9][0-9]) (?<hh>[0-9][0-9])(?<mm>[0-9][0-9])(?<ss>[0-9][0-9])\.txt$/) {
@@ -3098,12 +3156,14 @@ sub import_from_game {
 			#if ( $empty_game_files{$fname2} ) { next; }
 			my $reg = $+{region};
 			my $item = &item_fname2iname( $+{item} );
+			if (! $items_id{$item} ) { die &time2s()." import_from_game(): malformed item name >$item<\n"; } 
 			my $id = $items_id{$item};
 			my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$modtime,$ctime,$blksize,$blocks) = stat($fname_full);
 			
 			### purge game export files > 72 hours old
 			if (time - $modtime > $age_expire_export) {
 				unlink $fname_full;
+				#print &time2s()." deleting1 ".&strip_dir($fname_full)."\n" if ($fname_full =~ m/$debugStr/);
 				next;
 			}
 
@@ -3114,17 +3174,24 @@ sub import_from_game {
 			my $f1 = join($Sep, $fname_full, $ftime);
 			
 			### if dup delete older
-			if (! $Exports{$key}) {
-				$Exports{$key} = $f1;
+			if (! $Marketlogs{$key}) {
+				$Marketlogs{$key} = $f1;
 			} else {
 				### 2 files for same region-item pair => most recent wins
-				my $f2 = $Exports{$key};
+				my $f2 = $Marketlogs{$key};
 				my ($fname2_full, $ftime2) = split($Sep, $f2);
 				if ($ftime2 >= $ftime) {
 					unlink $fname_full;
+					#print &time2s()." deleting2 ".&strip_dir($fname_full)."\n" if ($fname_full =~ m/$debugStr/);
 				} else {
 					unlink $fname2_full;
-					$Exports{$key} = $f1;
+					$Marketlogs{$key} = $f1;
+					#if ($fname2_full =~ m/$debugStr/) {
+					#	print &time2s()." deleting3 ".&strip_dir($fname2_full)."\n";
+					#	print ">>> key $key\n";
+					#	print ">>> old $Marketlogs{$key}\n";
+					#	print ">>> new $f1\n";
+					#}
 				}
 			}
 		} else {
@@ -3145,8 +3212,8 @@ sub import_from_game {
 
 			### check From region
 			my $key = "$from_r.$id";
-			if ($Exports{$key}) {
-				my ($fname, $ftime) = split($Sep, $Exports{$key}); ### evetime of marketlog export
+			if ($Marketlogs{$key}) {
+				my ($fname, $ftime) = split($Sep, $Marketlogs{$key}); ### evetime of marketlog export
 				if ( !$lastImports{$key} || $lastImports{$key} < $ftime) {
 					&import_game_file($fname, $ftime);
 					$lastImports{$key} = $ftime;
@@ -3159,8 +3226,8 @@ sub import_from_game {
 
 			### check To region
 			my $key2 = "$to_r.$id";
-			if ($Exports{$key2}) {
-				my ($fname, $ftime) = split($Sep, $Exports{$key2});
+			if ($Marketlogs{$key2}) {
+				my ($fname, $ftime) = split($Sep, $Marketlogs{$key2});
 				my $age2 = $Data{$r}{$id}{Bids_Age};
 				#if ( $modtime > $age2 )
 				if ( !$lastImports{$key} || $lastImports{$key} < $ftime) {
@@ -3202,8 +3269,8 @@ sub refresh_server_data {
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
 	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
 	if ($mtime and ($mtime > $last_update_server)) {
-		#$Redraw ||= &import_from_server();
-		&import_from_server();
+		#$Redraw ||= &import_candidates();
+		&import_candidates();
 		&export_crest_reqs(); ### request crest data for new items
 
 		my $update_ago = ($last_update_server != 0) ? (sprintf("%3i", (time - $last_update_server))."s ago") : ("never");
