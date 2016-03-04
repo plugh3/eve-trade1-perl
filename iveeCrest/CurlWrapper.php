@@ -239,7 +239,7 @@ class CurlWrapper
         $this->cache->setItem($response);
     }
 
-	protected function backspace($x = 1)
+	public function backspace($x = 1)
 	{
 		$ret = "";
 		for ($i = 0; $i < $x; $i++) { $ret .= "\x8"; }
@@ -301,8 +301,11 @@ class CurlWrapper
     public function asyncMultiGet(array $hrefs, array $header, callable $getAuthHeader, callable $callback,
         callable $errCallback = null, $cache = true
     ) {
-		$maxWindow = 150;
-        echo time2s()."curl.asyncMultiGet(".count($hrefs).") width $maxWindow\n"; //var_dump($hrefs);
+		$maxWindow = 300;
+
+        echo time2s()."curl.asyncMultiGet(".sprintf("%4d", count($hrefs)).") x$maxWindow => ".sprintf("%7.1f", 0.0)." GET/s"; 
+		//var_dump($hrefs);
+
         //separate hrefs that are already cached from those that need to be requested
         $hrefsToQuery = array();
         foreach ($hrefs as $href) {

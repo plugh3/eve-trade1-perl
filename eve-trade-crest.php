@@ -47,7 +47,7 @@ $fnameCache = __DIR__.$dir_sep.$fname_cache;
 $client->importCache($fnameCache);
 //$client->getEndpoint();
 $handler->getRegions();
-$handler->getMarketTypeHrefs();
+$handler->getMarketTypeHrefs(); echo "\n";
 $client->exportCache($fnameCache);
 // good to go
 
@@ -95,11 +95,10 @@ $last2 = array();   // time of last export, by filename
 $last_empty = 0;
 while (1)
 {
+    // wait for request file update
     $fnameReqsShort = $fname_crest_reqs;
     $fnameReqs = __DIR__ . DIRECTORY_SEPARATOR . $fnameReqsShort;
 	while (!file_exists($fnameReqs)) { sleep(1); }
-
-    // wait for request file update
     clearstatcache();
 	$mtime = filemtime($fnameReqs);
     while ($mtime <= $last) { 
@@ -107,90 +106,89 @@ while (1)
 		clearstatcache();
 		$mtime = filemtime($fnameReqs);
 	} 
-
     
-    // import request file => rowsRaw[]
+    // import request file => crestReqs[]
+    $crestReqs = array();
+	$regionNames = array();
+	$itemNames = array();
     $fh = fopen($fnameReqs, 'r') or die("Failed to open $fname");
     flock($fh, LOCK_EX);
-    $rowsRaw = array();
-    while (($row = fgets($fh)) !== false)
+    while (($file_row = fgets($fh)) !== false)
     {
-        $row = rtrim($row);
-        $rowsRaw[] = $row;
+        $file_row = rtrim($file_row);
+        list($reg_id, $reg_name, $item_id, $item_name, $is_bid) = split($sep, $file_row);
+
+		$row_mod = join_row($reg_id, $item_id, $is_bid);
+        $crestReqs[] = $row_mod;
+		$regionNames[$reg_id] = $reg_name;
+		$itemNames[$item_id] = $item_name;
     }
     flock($fh, LOCK_UN);
     fclose($fh);
 
-    if (count($rowsRaw) == 0) { 
-      if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} 
+	// empty request file?
+    if (count($crestReqs) == 0) { 
+		if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} 
     } else { 
-      $last_empty = 0; 
+		$last_empty = 0; 
     }
 
-    // aggregate rows by region => rowsByRegion[][]
-    $rowsByRegion = array();
+	// crest GET cooldown (45s)
     $time = time();
-    foreach ($rowsRaw as $row)
-    {
-        list($reg_id, $reg_name, $item_id, $item_name, $is_bid) = explode($sep, $row);
-        
-        // crest get cooldown (15s)
-        $cooldown_crest = 30;
+    foreach ($crestReqs as $row) {
+        $cooldown_crest = 45;
         if (array_key_exists($row, $last2) && $time - $last2[$row] <= $cooldown_crest) { 
             //echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n";
+			array_remove($crestReqs, $row);
             continue; 
         }
         $last2[$row] = $time;
-
-        if (!isset($rowsByRegion[$reg_id])) { $rowsByRegion[$reg_id] = array(); } // necessary?
-        $rowsByRegion[$reg_id][] = $row;
     }
-    if (count($rowsByRegion) > 0) { $last = $mtime; }
-    if (count($rowsByRegion) > 0) { echo time2s()."php.requested(".count($rowsRaw).")\n";}
-    
-    // get crest data => Orders[r][i][]
-    // via aysnc multiget for each region
-    $Orders = array();
-    // loop: region
-    foreach ($rowsByRegion as $reg_id => $rows) {
-      if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); }
+	
+	if (count($crestReqs) == 0) { sleep(1); continue; }
+    $last = $mtime;
 
-      // setup args for multiGet()
-      $typeIds = array(); // multiget arg AND while loop condition
-      $rowByItem = array();
-      // loop: item
-      foreach ($rows as $row) 
-      {
-          list($reg_id2, $reg_name, $item_id, $item_name, $is_bid) = explode($sep, $row);
-          // TODO: check reg_ids match
-          $typeIds[] = $item_id;
-          $rowByItem[$item_id] = $row;          
-      }
 
-      // loop until GET queue is empty (some fail b/c rate limits or ???)
-      $pass = 0;
-      while (! empty($typeIds)) {
+	//
+	// fetch from Crest
+	// loop until GET queue is empty (some fail b/c rate limits or ???)
+	//
+	$pass = 0;
+    while (! empty($crestReqs)) {
         $pass++; if ($pass > 1) {echo "\x07";}
+
+		// setup params for getMultiMarketOrders2()
+		$typeIDs 	= array();
+		$regionIDs 	= array();
+		$bidTypes 	= array();
+		$Orders 	= array();
+		foreach ($crestReqs as $row) {
+			list($reg_id, $item_id, $is_bid) = split_row($row);
+			// input
+			$typeIDs[] 		= $item_id +0;
+			$regionIDs[] 	= $reg_id +0;
+			$bidTypes[] 	= $is_bid &&true;
+			// output
+			if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); } // init Orders[r][]
+		}
+
         
         // populate Orders[reg][item][]
         $suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
-        $handler->getMultiMarketOrders(
-            $typeIds, 
-            $reg_id2, 
-            #function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, $reg_id, &$typeIds) {
-            function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, &$typeIds) {
+        echo time2s()."php.getMulti(".count($typeIDs).")$suffix\n";
+        $handler->getMultiMarketOrders2(
+            $typeIDs, 
+            $regionIDs, 
+            $bidTypes, 
+            function(\iveeCrest\Response $response) use (&$crestReqs, &$Orders, &$n_success) {
 
-                // item ID: parse from URL
+                // parse URL
                 $url = $response->getInfo()['url'];
-				list($item_id, $reg_id, $bid_type) = decode_url($url);
-                #$item_id = url2item($url);
-                array_remove($typeIds, $item_id); // remove item_id from GET queue
+				list($reg_id, $item_id, $bid_type) = decode_url($url);
+				$row = join_row($reg_id, $item_id, $bid_type);
 
-                // region ID: lookup in dictionary of file rows (eve-trade-crest-reqs.txt)
-                $row = $rowByItem[$item_id +0];
-                #$sep = '~'; // TODO: use global instead
-                #list($reg_id, $reg_name, $item_id2, $item_name, $is_bid) = explode($sep, $row);
+				// remove from queue
+                array_remove($crestReqs, $row); 
 
                 // orders: main body of http response
                 // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
@@ -205,47 +203,44 @@ while (1)
                     $Orders[$reg_id][$item_id]->orders = $orders;
                 }
             },
-            function (\iveeCrest\Response $r) use ($rowByItem) {
-              echo " HTTP ".$r->getInfo()['http_code']."\n";
+            function (\iveeCrest\Response $r) {
+              //echo " HTTP ".$r->getInfo()['http_code']."\n";
               //echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
               //echo "\x07"; # beep
               //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             },
 			false // disable caching for getMultiMarketOrders() call (reduce memory)
         ); // end getMultiMarketOrders() call
-        echo " [peak ".sprintf("%.1f", $client->cw->max_rate)."]";
-		echo "\n";
+		
+		$out = sprintf("%7.1f", $client->cw->max_rate)." GET/s";
+		echo($client->cw->backspace(strlen($out)));
+        echo $out." peak\n";
+
 		$client->cw->max_rate = 0.0;
-      }
     }
     
     // export to Marketlogs files
-    $nexports = 0;
-    // TODO: check if more recent Marketlog file already exists
-    $exportQueue = array();
-    foreach ($Orders as $reg_id => $OrdersByItem) {
-        foreach ($OrdersByItem as $i => $mkt) {
-            $row = $mkt->row;
-            $orders = $mkt->orders;
-            $text = formatHeader().formatOrders($orders, $reg_id);
-            $fname2 = getExportFilename($row);
+	exportMarketlogs($Orders, $regionNames, $itemNames);
 
-            $n = count(explode("\n", $text))-1;
-            $fname_short = substr($fname2, strpos($fname2, $dir_export) + strlen($dir_export));
-            //echo time2s()."export (x$n) $fname_short\n";
-
-            $exportQueue[$fname2] = $text;
-            //export($fname2, $text);
-            $nexports++;
-        }
-    }
-    if ($nexports > 0) { echo time2s()."php.export($nexports)\n"; }
-    foreach ($exportQueue as $fname2 => $text) {
-      export($fname2, $text);
-    }
-    
     #echo time2s()."sleep 1 sec\n";
     sleep(1);
+}
+
+
+//
+// utility fns
+//
+
+function join_row($reg, $item, $is_bid)
+{
+	global $sep;
+	return join($sep, array($reg +0, $item +0, $is_bid +0));
+}
+function split_row($row)
+{
+	global $sep;
+	list ($reg, $item, $is_bid) = split($sep, $row);
+	return array($reg +0, $item +0, $is_bid +0);
 }
 function regexp_esc($x)
 {
@@ -257,48 +252,80 @@ function decode_url($url)
 	$re =  $base_esc.'market\/([0-9]{8})\/orders\/(buy|sell)\/\?type\='.$base_esc.'types\/([0-9]{1,6})\/';
 	preg_match("/$re/", $url, $match);
 	
-	$itemID = $match[3];
 	$regionID = $match[1];
+	$itemID = $match[3];
 	$bidType = ($match[2] == "buy");
-    return array($itemID, $regionID, $bidType);
+    return array($regionID, $itemID, $bidType);
 }
 function array_remove(array &$ary, $val) {
     for($i = 0; $i < count($ary); $i++) {
         if ($ary[$i] == $val) { array_splice($ary, $i, 1); return; }
     }
+	echo "array_remove() failed >$val<\n";
 }
-function url2item($url)
+function time2s($time = '')
 {
-    $base = iveeCrest\Config::getCrestBaseUrl();
-    $match = '?type='.$base.'types/'; 
-    if (strpos($url, $match) === false) return 0;
-    $item_id = substr($url, strpos($url, $match) + strlen($match));
-    $item_id = substr($item_id, 0, strlen($item_id) - 1); ## chomp trailing '/'
-    return $item_id;
+    if ($time == '') { $time = time(); }
+    return date("h:i:sa ", $time - 8*60*60);
 }
-function url2buy($url)
+
+
+//
+// Marketlogs export
+//
+
+function exportMarketlogs($Orders, $regionNames, $itemNames)
 {
-    return (strpos($url, 'orders/sell') === false);
+	// queue files for export
+    $exportQueue = array();
+    $nexports = 0;
+    foreach ($Orders as $reg_id => $regionOrders) {
+        foreach ($regionOrders as $item_id => $mkt) {
+			// TODO: check if more recent Marketlog file already exists
+
+			list($reg_id2, $item_id2, $is_bid) = split_row($mkt->row);
+			if ($reg_id != $reg_id2) die("inconsistent regions $reg_id $reg_id2");
+			if ($item_id != $item_id2) die("inconsistent regions $reg_id $reg_id2");
+			
+			// file name
+            $regionName = $regionNames[$reg_id];
+			$itemName = $itemNames[$item_id];
+            $fname2 = getExportFilename($mkt->row, $regionName, $itemName);
+
+			// file contents
+            $orders = $mkt->orders;
+            $text = formatHeader().formatOrders($orders, $reg_id);
+			
+            //$n = count(explode("\n", $text))-1;
+            //$fname_short = substr($fname2, strpos($fname2, $dir_export) + strlen($dir_export));
+            //echo time2s()."export (x$n) $fname_short\n";
+
+            $exportQueue[$fname2] = $text;
+            $nexports++;
+        }
+    }
+	
+	// bulk export
+    if ($nexports > 0) { echo time2s()."php.export($nexports)\n"; }
+    foreach ($exportQueue as $fname2 => $text) {
+      exportFile($fname2, $text);
+    }	
 }
-function getExportFilename($row)
+function getExportFilename($row, $fname_region, $fname_item)
 {
-	### inputs: need region_name and item_name from $row
     global $sep;
     global $dir_export;
 
-    // region
-    list($reg_id, $fname_region, $item_id, $fname_item, $is_bid) = explode($sep, $row);
-
+   // region
+    list($reg_id, $item_id, $is_bid) = split_row($row);
     // item
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
 	$fname_item = item_name2fname($fname_item);
-
     // time
     $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
-
     return $dir_export.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';        
 }
-function export($fname, $text)
+function exportFile($fname, $text)
 {
     global $dir_export;
 
@@ -347,9 +374,4 @@ function formatOrders($orders, $reg_id)
         $ret .= $line;
     }
     return $ret;
-}
-function time2s($time = '')
-{
-    if ($time == '') { $time = time(); }
-    return date("h:i:sa ", $time - 8*60*60);
 }

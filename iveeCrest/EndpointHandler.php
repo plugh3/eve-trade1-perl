@@ -445,6 +445,59 @@ class EndpointHandler
     }
 
     /**
+     * Gets market orders for multiple types in multiple regions asynchronously. 
+	 *
+     * @param array $typeIds 		item IDs to be queried
+     * @param array $regionIds 		region IDs, corresponding to each $typeIds[] element
+     * @param array $bidTypes 		booleans of order type (true => buy), corresponding to each $typeIds[] element
+     * @param callable $callback a function expecting one \iveeCrest\Response object as argument, called for every
+     * successful response
+     * @param callable $errCallback a function expecting one \iveeCrest\Response object as argument, called for every
+     * non-successful response
+     * @param bool $cache if the multi queries should be cached
+     *
+     * @return void
+     */
+    public function getMultiMarketOrders2(array $typeIds, array $regionIds, array $bidTypes, callable $callback, callable $errCallback = null,
+        $cache = true
+    ) {
+        #echo time2s()."eh.getMultiMarketOrders2(".count($typeIds).")\n";
+
+        //get the necessary hrefs
+        $hrefs = array();
+        $marketTypeHrefs = $this->getMarketTypeHrefs();
+		for ($i = 0; $i < count($typeIds); $i++) {
+			$typeId = $typeIds[$i];
+			$regionId = $regionIds[$i];
+			$bidType = $bidTypes[$i];
+
+			//check for wormhole regions
+			if ($regionId > 11000000) {
+				$invalidArgumentExceptionClass = Config::getIveeClassName('InvalidArgumentException');
+				throw new $invalidArgumentExceptionClass("Invalid regionId. Wormhole regions have no market.");
+			}
+		
+			$region = $this->getRegion($regionId);
+            if (!isset($marketTypeHrefs[$typeId])) {
+                $invalidArgumentExceptionClass = Config::getIveeClassName('InvalidArgumentException');
+                throw new $invalidArgumentExceptionClass('TypeID=' . (int) $typeId . ' not found in market types');
+            }
+
+            $href_base = ($bidType) ? ($region->marketBuyOrders->href) : ($region->marketSellOrders->href);
+			$hrefs[] = $href_base . '?type=' . $marketTypeHrefs[$typeId];			
+		}
+
+        //run the async queries
+        $this->client->asyncGetMultiEndpointResponses(
+            $hrefs,
+            $callback,
+            $errCallback,
+            static::MARKET_ORDER_COLLECTION_REPRESENTATION,
+            $cache
+        );
+    }
+
+    /**
      * Gets market history for a type in a region.
      *
      * @param int $typeId of the item type
