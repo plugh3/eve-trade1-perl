@@ -42,7 +42,6 @@ $client = new iveeCrest\Client(
 //instantiate an endpoint handler
 $handler = new iveeCrest\EndpointHandler($client);
 
-
 // prime cache
 $fnameCache = __DIR__.$dir_sep.$fname_cache;
 $client->importCache($fnameCache);
@@ -82,7 +81,7 @@ $sep = '~';
 
 function set_remove(array &$set, $id) {
     for($i = 0; $i < count($set); $i++) {
-        if ($set[$i] == $id) { array_splice($set, $i); return; }
+        if ($set[$i] == $id) { array_splice($set, $i, 1); return; }
     }
 }
 
@@ -97,7 +96,7 @@ $last_empty = 0;
 while (1)
 {
     $fnameReqsShort = $fname_crest_reqs;
-    $fnameReqs = __DIR__.'/'.$fnameReqsShort;
+    $fnameReqs = __DIR__ . DIRECTORY_SEPARATOR . $fnameReqsShort;
 	while (!file_exists($fnameReqs)) { sleep(1); }
 
     // wait for request file update
@@ -171,27 +170,27 @@ while (1)
       // loop until GET queue is empty (some fail b/c rate limits or ???)
       $pass = 0;
       while (! empty($typeIds)) {
-        $pass++;
-        if ($pass > 1) {echo "\x07";}
+        $pass++; if ($pass > 1) {echo "\x07";}
         
         // populate Orders[reg][item][]
         $suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-        //echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
-        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix";
+        echo time2s()."php.getMulti(".count($typeIds).") region=$reg_id$suffix\n";
         $handler->getMultiMarketOrders(
             $typeIds, 
             $reg_id2, 
-            function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, $reg_id, &$typeIds) {
+            #function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, $reg_id, &$typeIds) {
+            function(\iveeCrest\Response $response) use ($rowByItem, &$Orders, &$typeIds) {
 
                 // item ID: parse from URL
                 $url = $response->getInfo()['url'];
-                $item_id = url2item($url);
-                set_remove($typeIds, $item_id); // remove item_id from GET queue
+				list($item_id, $reg_id, $bid_type) = decode_url($url);
+                #$item_id = url2item($url);
+                array_remove($typeIds, $item_id); // remove item_id from GET queue
 
                 // region ID: lookup in dictionary of file rows (eve-trade-crest-reqs.txt)
-                $row = $rowByItem[$item_id];
-                $sep = '~'; // TODO: use global instead
-                list($reg_id, $reg_name, $item_id2, $item_name, $is_bid) = explode($sep, $row);
+                $row = $rowByItem[$item_id +0];
+                #$sep = '~'; // TODO: use global instead
+                #list($reg_id, $reg_name, $item_id2, $item_name, $is_bid) = explode($sep, $row);
 
                 // orders: main body of http response
                 // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
@@ -207,13 +206,16 @@ while (1)
                 }
             },
             function (\iveeCrest\Response $r) use ($rowByItem) {
-              echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
+              echo " HTTP ".$r->getInfo()['http_code']."\n";
+              //echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
               //echo "\x07"; # beep
               //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
             },
 			false // disable caching for getMultiMarketOrders() call (reduce memory)
         ); // end getMultiMarketOrders() call
-        echo "done\n";
+        echo " [peak ".sprintf("%.1f", $client->cw->max_rate)."]";
+		echo "\n";
+		$client->cw->max_rate = 0.0;
       }
     }
     
@@ -245,13 +247,33 @@ while (1)
     #echo time2s()."sleep 1 sec\n";
     sleep(1);
 }
+function regexp_esc($x)
+{
+	return preg_quote($x, '/');
+}
+function decode_url($url)
+{
+    $base_esc = regexp_esc(iveeCrest\Config::getCrestBaseUrl());
+	$re =  $base_esc.'market\/([0-9]{8})\/orders\/(buy|sell)\/\?type\='.$base_esc.'types\/([0-9]{1,6})\/';
+	preg_match("/$re/", $url, $match);
+	
+	$itemID = $match[3];
+	$regionID = $match[1];
+	$bidType = ($match[2] == "buy");
+    return array($itemID, $regionID, $bidType);
+}
+function array_remove(array &$ary, $val) {
+    for($i = 0; $i < count($ary); $i++) {
+        if ($ary[$i] == $val) { array_splice($ary, $i, 1); return; }
+    }
+}
 function url2item($url)
 {
     $base = iveeCrest\Config::getCrestBaseUrl();
     $match = '?type='.$base.'types/'; 
     if (strpos($url, $match) === false) return 0;
     $item_id = substr($url, strpos($url, $match) + strlen($match));
-    $item_id = substr($item_id, 0, strlen($item_id) - 1);
+    $item_id = substr($item_id, 0, strlen($item_id) - 1); ## chomp trailing '/'
     return $item_id;
 }
 function url2buy($url)
@@ -260,8 +282,8 @@ function url2buy($url)
 }
 function getExportFilename($row)
 {
+	### inputs: need region_name and item_name from $row
     global $sep;
-    global $_item_name2fname;
     global $dir_export;
 
     // region

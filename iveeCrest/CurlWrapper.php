@@ -64,7 +64,7 @@ class CurlWrapper
                 CURLOPT_USERAGENT       => $this->userAgent,
                 CURLOPT_SSL_VERIFYPEER  => true,
                 CURLOPT_SSL_CIPHER_LIST => 'TLSv1', //prevent protocol negotiation fail
-		CURLOPT_CAINFO          => __DIR__ . '/cacert.pem',
+				CURLOPT_CAINFO          => __DIR__ . DIRECTORY_SEPARATOR . 'cacert.pem',
             )
         );
 
@@ -239,6 +239,48 @@ class CurlWrapper
         $this->cache->setItem($response);
     }
 
+	protected function backspace($x = 1)
+	{
+		$ret = "";
+		for ($i = 0; $i < $x; $i++) { $ret .= "\x8"; }
+		return $ret;
+	}
+		
+	public $fetch_rate = 0.0;
+	public $max_rate = 0.0;
+	protected $history = array();
+	protected $n_gets = 0;
+	protected function sample()
+	{
+		$sample_period = 1.0;  ## sec
+
+		### current sample
+		$now = microtime(true);
+		$this->n_gets++;
+		array_unshift($this->history, array($this->n_gets, $now));
+
+		### find end of sampling window
+		$n_sample = 0;
+		$t_sample = $now;
+		for ($i_sample = 0; $i_sample < count($this->history); $i_sample++) {
+			list ($n_sample, $t_sample) = $this->history[$i_sample];
+			if ($now - $t_sample >= $sample_period) { break; }
+		}
+
+		### calc sample (n/usec)
+		$rate = ($now != $t_sample) 
+			? (($this->n_gets - $n_sample) / ($now - $t_sample))
+			: (0.0);
+		$this->fetch_rate = $rate;
+		if ($rate > $this->max_rate) { $this->max_rate = $rate; }
+		
+		### output
+		$out = sprintf("%7.1f", $rate)." GET/s"; ## gets/sec
+		#echo sprintf("%5d", $this->n_gets).": ".$now." usec\n";
+		echo($this->backspace(strlen($out)));
+		echo $out;
+	}
+	
     /**
      * Performs parallel asynchronous GET requests.
      * 
@@ -259,7 +301,8 @@ class CurlWrapper
     public function asyncMultiGet(array $hrefs, array $header, callable $getAuthHeader, callable $callback,
         callable $errCallback = null, $cache = true
     ) {
-        //echo time2s()."curl.asyncMultiGet()\n"; //var_dump($hrefs);
+		$maxWindow = 150;
+        echo time2s()."curl.asyncMultiGet(".count($hrefs).") width $maxWindow\n"; //var_dump($hrefs);
         //separate hrefs that are already cached from those that need to be requested
         $hrefsToQuery = array();
         foreach ($hrefs as $href) {
@@ -276,7 +319,7 @@ class CurlWrapper
         }
 
         // make sure the rolling window isn't greater than the number of hrefs
-        $rollingWindow = count($hrefsToQuery) > 10 ? 10 : count($hrefsToQuery);
+        $rollingWindow = count($hrefsToQuery) > $maxWindow ? $maxWindow : count($hrefsToQuery);
 
         //CURL options for all requests
         $stdOptions = array(
@@ -284,7 +327,7 @@ class CurlWrapper
             CURLOPT_USERAGENT       => $this->userAgent,
             CURLOPT_SSL_VERIFYPEER  => true,
             CURLOPT_SSL_CIPHER_LIST => 'TLSv1', //prevent protocol negotiation fail
-            CURLOPT_CAINFO          => __DIR__ . '/cacert.pem',
+            CURLOPT_CAINFO          => __DIR__ . DIRECTORY_SEPARATOR . 'cacert.pem',
             CURLOPT_HTTPHEADER      => $header
         );
 
@@ -293,10 +336,10 @@ class CurlWrapper
         //setup the first batch of requests
         for ($i = 0; $i < $rollingWindow; $i++) {
             $href = $hrefsToQuery[$i];
-            //echo time2s()."curl.multi  $href\n";
+            #echo time2s()."curl.multi  $href\n";
             $responses[$href] = $this->addHandleToMulti($master, $href, $stdOptions, $getAuthHeader, $header);
         }
-
+		
         $running = false;
         do {
             //execute whichever handles need to be started
@@ -327,6 +370,9 @@ class CurlWrapper
 
                 //execute the callbacks passing the response as argument
                 if ($info['http_code'] == 200) {
+                    #echo time2s()."got   ".$url_short."\n";
+					$this->sample();
+					
                     //cache it if configured
                     if($cache)
                         $this->cache->setItem($res);
@@ -335,11 +381,10 @@ class CurlWrapper
                       $this->requeued[$info['url']] = NULL;
                       time2s().">>> recaptured ".$url_short."\n";
                     }
-                    echo time2s()."got   ".$url_short."\n";
 
                 } elseif (isset($errCallback)) {
-                    echo time2s()."cw.asyncMultiGet(): curl_multi, http ".$info['http_code']."\n";
-                    echo time2s()."requeueing ".$url_short."\n";
+                    #echo time2s()."cw.asyncMultiGet(): curl_multi, http ".$info['http_code']."\n";
+                    #echo time2s()."requeueing ".$url_short."\n";
                     $errCallback($res);
                     $hrefsToQuery[] = $info['url']; //put back on queue
                     $this->requeued[$info['url']] = true;

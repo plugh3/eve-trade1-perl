@@ -69,7 +69,7 @@ class Client
     /**
      * @var \iveeCrest\CurlWrapper $cw holds the object handling CURL.
      */
-    protected $cw;
+    public $cw;
 
     /**
      * @var \stdClass $rootEndpoint holds the root endpoint (after having been requested at least once)
@@ -456,7 +456,7 @@ class Client
     public function asyncGetMultiEndpointResponses(array $hrefs, callable $callback, callable $errCallback = null,
         $accept = null, $cache = true
     ) {
-        //echo time2s()."cl.asyncGetMultiEndpointResponses()\n";
+        //echo time2s()."cl.asyncGetMultiEndpointResponses(".count($hrefs).")\n";
         $header = array();
         if(isset($accept))
             $header[] = 'Accept: application/' . $accept;
