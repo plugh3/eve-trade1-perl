@@ -3,9 +3,11 @@
 
 // primer
 //echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n"; // print
-//$item_fname2iname = array('k1' => 'v1', 'k2' => 'v2'); // hash
+//$_item_fname2name = array('k1' => 'v1', 'k2' => 'v2'); // hash
 //iterator
 //concat
+
+$debugStr = "Gist X-Type Large Shield Booster";
 
 // OS-specific stuff
 switch (strtolower(php_uname("s"))) {
@@ -51,41 +53,29 @@ $client->exportCache($fnameCache);
 // good to go
 
 
-// maps file name => item name
-$item_fname2iname = array(
+// item_name2fname(): convert itemname to filename
+// items are sometimes spelled differently in Marketlog filenames
+// this backwards approach makes for easier cut-and-paste with Perl version of same
+// map: file name => item name
+$_item_fname2name = array(
 	'GDN-9 Nightstalker Combat Goggles' 		=> 'GDN-9 "Nightstalker" Combat Goggles',
-	'Odin Synthetic Eye (left_gray)' 		=> 'Odin Synthetic Eye (left/gray)',
-	'Men\'s \'Hephaestus\' Shoes (white_red)' 		=> 'Men\'s \'Hephaestus\' Shoes (white/red)',
 	'SPZ-3 Torch Laser Sight Combat Ocular Enhancer (right_black)' => 'SPZ-3 "Torch" Laser Sight Combat Ocular Enhancer (right/black)',
-	'Public Portrait_ How To' 			=> 'Public Portrait: How To',
-	'Men\'s \'Ascend\' Boots (brown_gold)' 		=> 'Men\'s \'Ascend\' Boots (brown/gold)',
-	'Beta Reactor Control_ Shield Power Relay I' 	=> 'Beta Reactor Control: Shield Power Relay I',
-	'Alliance Tournament I_ Band of Brothers' 	=> 'Alliance Tournament I: Band of Brothers',
-	'Alliance Tournament I_ KAOS Empire' 		=> 'Alliance Tournament I: KAOS Empire',
-	'Alliance Tournament II_ Band of Brothers' 	=> 'Alliance Tournament II: Band of Brothers',
-	'Alliance Tournament III_ Band of Brothers' 	=> 'Alliance Tournament III: Band of Brothers',
-	'Alliance Tournament III_ Cult of War' 		=> 'Alliance Tournament III: Cult of War',
-	'Alliance Tournament III_ Interstellar Alcohol Conglomerate' => 'Alliance Tournament III: Interstellar Alcohol Conglomerate',
-	'Alliance Tournament IV_ HUN Reloaded' 		=> 'Alliance Tournament IV: HUN Reloaded',
-	'Alliance Tournament IV_ Pandemic Legion' 	=> 'Alliance Tournament IV: Pandemic Legion',
-	'Alliance Tournament IV_ Star Fraction' 	=> 'Alliance Tournament IV: Star Fraction',
-	'Alliance Tournament IX_ Darkside.' 		=> 'Alliance Tournament IX: Darkside.',
-	'Alliance Tournament IX_ HYDRA RELOADED and 0utbreak' => 'Alliance Tournament IX: HYDRA RELOADED and 0utbreak',
-	'Alliance Tournament X_ HUN Reloaded' 		=> 'Alliance Tournament X: HUN Reloaded',
-	'Alliance Tournament V_ Ev0ke' 			=> 'Alliance Tournament V: Ev0ke',
-	'Alliance Tournament V_ Triumvirate' 		=> 'Alliance Tournament V: Triumvirate',
-	'Alliance Tournament VI_ Pandemic Legion' 	=> 'Alliance Tournament VI: Pandemic Legion',
-	'Alliance Tournament VI_ R.U.R.' 		=> 'Alliance Tournament VI: R.U.R.',
-	'Alliance Tournament VII_ Pandemic Legion' 	=> 'Alliance Tournament VII: Pandemic Legion',
-	'Alliance Tournament VIII_ Pandemic Legion' 	=> 'Alliance Tournament VIII: Pandemic Legion',
-	'Alliance Tournament VIII_ HYDRA RELOADED' 	=> 'Alliance Tournament VIII: HYDRA RELOADED',
-	'Alliance Tournament X_ HUN Reloaded' 		=> 'Alliance Tournament X: HUN Reloaded',
-	'Alliance Tournament X_ Verge of Collapse' 	=> 'Alliance Tournament X: Verge of Collapse',
 );
-$item_iname2fname = array();
-foreach ($item_fname2iname as $fname => $iname) {
-  $item_iname2fname[$iname] = $fname;
+// map: item name => file name
+$_item_name2fname = array();
+foreach ($_item_fname2name as $fname => $iname) {
+  $_item_name2fname[$iname] = $fname;
 }
+function item_name2fname($name) {
+	// brute force
+	global $_item_name2fname;
+	if (array_key_exists($name, $_item_name2fname)) { return $_item_name2fname[$name]; }
+	// algorithmic
+	$name = str_replace("/", "_", $name); 
+    $name = str_replace(":", "_", $name); 
+	return $name;
+}
+
 
 $sep = '~';
 
@@ -271,7 +261,7 @@ function url2buy($url)
 function getExportFilename($row)
 {
     global $sep;
-    global $item_iname2fname;
+    global $_item_name2fname;
     global $dir_export;
 
     // region
@@ -279,15 +269,12 @@ function getExportFilename($row)
 
     // item
     if (!$fname_item) { print ">>> malformed fname region=$fname_region, item=\"$fname_item\" [$item_id]\n\$row=>$row<\n"; exit;}
-    if (array_key_exists($fname_item, $item_iname2fname)) { $fname_item = $item_iname2fname[$fname_item]; }
-    $fname_item = str_replace("/", "_", $fname_item); // hacky
-    $fname_item = str_replace(":", "_", $fname_item); // hacky
+	$fname_item = item_name2fname($fname_item);
 
     // time
     $fname_time = date("Y.m.d His", time() - 300); ### crest data is 5 mins delayed, so backdate timestamp
 
-    $fname2 = $dir_export.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';
-    return $fname2;        
+    return $dir_export.$fname_region.'-'.$fname_item.'-'.$fname_time.'.txt';        
 }
 function export($fname, $text)
 {
@@ -296,7 +283,9 @@ function export($fname, $text)
     $fname_short = substr($fname, strpos($fname, $dir_export) + strlen($dir_export));
     $n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
     $fname_short2 = $match[1];
-    //echo time2s()."crest-php.export() \"$fname_short2\"\n";
+	//global $debugStr;
+    //if ( strpos($fname_short, $debugStr) !== FALSE) { echo time2s()."crest-php.export() \"$fname_short\"\n"; }
+
     $fh = fopen($fname, 'w') or die("Failed to open $fname");
     flock($fh, LOCK_EX);
     fwrite($fh, $text);
