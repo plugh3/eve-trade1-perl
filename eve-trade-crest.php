@@ -154,14 +154,15 @@ while (1)
 	// loop until GET queue is empty (some fail b/c rate limits or ???)
 	//
 	$pass = 0;
+	$Orders 	= array();
     while (! empty($crestReqs)) {
-        $pass++; if ($pass > 1) {echo "\x07";}
+        $pass++; 
+		#if ($pass > 1) {echo "\x07";}
 
 		// setup params for getMultiMarketOrders2()
 		$typeIDs 	= array();
 		$regionIDs 	= array();
 		$bidTypes 	= array();
-		$Orders 	= array();
 		foreach ($crestReqs as $row) {
 			list($reg_id, $item_id, $is_bid) = split_row($row);
 			// input
