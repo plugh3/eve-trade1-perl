@@ -35,28 +35,34 @@ my $debugStr = "Gist X-Type Large Shield Booster";
 
 ### TODO: spawn processes on OSX
 
-my $cargo_filename = 		"data-sky2dash.txt";
-my $my_data_filename = 		"data-dash-all.txt";
-my $fname_crest_reqs = 		"data-dash2crest.txt";
-
 ### OS-specific stuff
 my $eol;
 my $dir_sep;
 my $dir_home;
 my $dir_marketlogs;
+my $dir_data;
 if      ($Config{osname} eq "darwin") {
 	$eol = "\r\n";
 	$dir_sep = '/';
 	$dir_home = $ENV{'HOME'};
 	$dir_marketlogs = $dir_home.'/Library/Application Support/EVE Online/p_drive/User/My Documents/EVE/logs/Marketlogs';
+	$dir_data = $dir_home.'/Dropbox/_data/evedash1';
 } elsif ($Config{osname} eq "MSWin32") {
 	$eol = "\n";
 	$dir_sep = "\\";
 	$dir_home = $ENV{'HOMEDRIVE'}.$ENV{'HOMEPATH'};
 	$dir_marketlogs = $dir_home.'\Documents\EVE\logs\Marketlogs';
+	$dir_data = 'C:\Users\csserra\Dropbox\_data\evedash1';
 } else {	
 	die ">>> unknown OS type \"$Config{osname}\"";
 } 
+
+
+### data files
+my $filename_sky2dash = 	"data-sky2dash.txt";
+my $filename_mydata = 		$dir_data.$dir_sep."data-dash-all.txt";
+my $filename_crestreqs = 	"data-dash2crest.txt";
+
 
 
 
@@ -65,9 +71,9 @@ if      ($Config{osname} eq "darwin") {
 ### INIT + SPAWN ###
 
 ### wipe data files
-#unlink $cargo_filename if (-e $cargo_filename);
-unlink $my_data_filename if (-e $my_data_filename);
-unlink $fname_crest_reqs if (-e $fname_crest_reqs);
+unlink $filename_sky2dash if (-e $filename_sky2dash);
+#unlink $filename_mydata if (-e $filename_mydata);
+unlink $filename_crestreqs if (-e $filename_crestreqs);
 
 ### start local mysqld
 if (not (`tasklist` =~ m/mysqld/)) {
@@ -170,6 +176,8 @@ my %Asks;
 my %Notify = ();
 my $N_items;
 my $N_orders;
+my $N_items_imported = 0;
+my $N_items_exported = 0;
 my $ntrades_deleted = 0;
 
 
@@ -218,9 +226,11 @@ my $color_hover =	'#5555ff';
 my $color_red = 	'#ff8888';
 my $color_brightred = 	'#ff3333';
 my $color_green = 	'#88ff88';
-my $color_yellow=	'#dfdf88';
+my $color_yellow =	'#dfdf88';
+### wow item quality color codes
 my $color_purple = 	'#c600ff';
-my $color_orange=       '#ff8000';
+my $color_orange =      '#ff8000';
+my $color_blue =	'#0070dd';
 
 
 
@@ -917,10 +927,15 @@ sub notify_refresh {
 	my $tag3 = "glow";
 	my $status = &time2s()." -- ";
 	#$status .= ($Net_tax == 0.9925) ? "Accounting V, " : "Accounting IV, ";
-	$status .= "$N_items trades (".&fmtPercent($ntrades_deleted / ($N_items+$ntrades_deleted), 1)." filtered), $N_orders bids/asks";
+	$status .= "$N_items trades (".&fmtPercent($ntrades_deleted / ($N_items+$ntrades_deleted), 1)." filtered)";
+	$status .= ", ";
+	$status .= "$N_orders bids/asks";
+	$status .= ", ";
+	$status .= "item set: $N_items_imported in, $N_items_exported out";
 	$status .= "\n";
 	$w_notify->insert('1.0', $status);
 	$w_notify->insert('2.0', "this is a test of glowing\n", [$tag3]);
+	
 
 	
 	foreach my $key (sort {$Notify{$a} <=> $Notify{$b};} keys %Notify) {
@@ -1880,14 +1895,12 @@ sub addTradeAllHubs {
 
 ### import evecentral data from skynet file to Data[] (via Bids/Asks + kludge)
 my $blast_last = 0;
-my $blast_period = 300;
-#my $blast_period = 1;
+#my $blast_period = 300;
+my $blast_period = 1;
 sub import_candidates {
-	print &time2s()." import_candidates()\n";
-
 	my $FH;
-	if(not open($FH, '<:crlf', $cargo_filename)) {
-		print &time2s()." import_candidates(): no cargo file \"$cargo_filename\"\n";
+	if(not open($FH, '<:crlf', $filename_sky2dash)) {
+		print &time2s()." import_candidates(): no cargo file \"$filename_sky2dash\"\n";
 		return;
 	}
 
@@ -1895,10 +1908,12 @@ sub import_candidates {
 	### use sparingly
 	my $blast = 0;
 	if ( time - $blast_last > $blast_period ) {
-		print &time2s()." >>> blast all hubs\n";
+		#print &time2s()." >>> blast all hubs\n";
 		$blast = 1;
 		$blast_last = time; ### reset cooldown
 	}
+
+	print &time2s()." import_candidates(".($blast ? "blast" : "").")\n";
 
 
 	### parse trade candidates (route + item) from file
@@ -2031,9 +2046,13 @@ sub line2time {
 
 sub export_my_data {
 	#print &time2s()." export_my_data()\n";
-	my $FH;
-	open($FH, '>:crlf', $my_data_filename);
-	flock($FH, LOCK_EX);
+	my ($FH, $FH2);
+	open($FH,  '>:crlf', $filename_mydata);
+	open($FH2, '>:crlf', $filename_mydata.".bak");
+	flock($FH,  LOCK_EX);
+	flock($FH2, LOCK_EX);
+
+	my %itemSet = ();
 	
 	foreach my $r (keys %Data) {
 		foreach my $i (keys %{$Data{$r}}) {
@@ -2044,6 +2063,7 @@ sub export_my_data {
 
 				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID);
 				print $FH $line."\n";
+				print $FH2 $line."\n";
 			}
 			foreach my $x (@{$Data{$r}{$i}{Bids}}) {
 				my $bidask = 'bid';
@@ -2052,10 +2072,16 @@ sub export_my_data {
 
 				my $line = join(':', $r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID);
 				print $FH $line."\n";
+				print $FH2 $line."\n";
 			}
+			
+			$itemSet{$i} = 1;
 		}
 	}
 	close $FH;
+	close $FH2;
+	
+	$N_items_exported = (keys %itemSet)+0;
 }
 
 
@@ -2063,16 +2089,18 @@ sub export_my_data {
 ### stomps Data[]
 sub import_my_data {
 	my $FH;
-	if (open($FH, '<:crlf', $my_data_filename)) {
+	if (open($FH, '<:crlf', $filename_mydata)) {
 		flock($FH, LOCK_SH);
 
 		%Data = ();
+		my %itemSet = ();
 
 		while (<$FH>) {
 			chomp;
 			my ($r, $i, $bidask, $price, $vol, $flag_ignore, $modtime, $flag_reliable, $orderID) = split(':');
 
-			if (time - $modtime > $age_expire_web) { next; }
+			### skip expired data
+			#if (time - $modtime > $age_expire_web) { next; }
 
 			### init
 			if (! $Data{$r}) { $Data{$r} = (); }
@@ -2103,8 +2131,11 @@ sub import_my_data {
 				$Data{$r}{$i}{Bids_Age} = &max($Data{$r}{$i}{Bids_Age}, $modtime);
 				$Data{$r}{$i}{Bids_Reliable} = $flag_reliable;
 			}
+			
+			$itemSet{$i} = 1;
 		}
 		close $FH;
+		$N_items_imported = (keys %itemSet)+0;
 	}
 }
 
@@ -2617,10 +2648,12 @@ sub repop {
 		}
 
 		### Filter 4: change Profit color if over threshold
-		if ($Totals{$r}{Profit} > 100_000_000) { 
+		if ($Totals{$r}{Profit} > 150_000_000) { 
 			&change_color_cell($p_route, $col_profit, $color_orange); 
-		} elsif ($Totals{$r}{Profit} > 50_000_000) { 
+		} elsif ($Totals{$r}{Profit} > 100_000_000) { 
 			&change_color_cell($p_route, $col_profit, $color_purple); 
+		} elsif ($Totals{$r}{Profit} > 50_000_000) { 
+			&change_color_cell($p_route, $col_profit, $color_blue); 
 		}
 
 		### Filter 5: change Volume color if over threshold
@@ -2933,7 +2966,7 @@ sub redraw {
 
 my $last_req = '';
 sub export_crest_reqs {
-	my $fname = $fname_crest_reqs; 
+	my $fname = $filename_crestreqs; 
 	my $age_old = 20 + 300; ### crest files are backdated by 5 mins
 	
 	### TODO: separate data by source
@@ -3249,11 +3282,11 @@ sub import_from_game {
 ### refresh(): update loop, called every N sec
 my $last_update_server = 0;
 sub server_data_init {
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($filename_sky2dash);
 	if (not $mtime) { 
 		print "\n".&time2s()." waiting for cargo file..."; 
 		while (not $mtime) {
-			($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+			($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($filename_sky2dash);
 			print ".";
 			sleep 1;
 		}
@@ -3266,7 +3299,7 @@ sub refresh_server_data {
 	my $Redraw = 0;
 
 	### check if evecentral data has changed (cargo file)
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($cargo_filename);
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($filename_sky2dash);
 	if (not $mtime) { print "\n".&time2s()." no cargo file\n"; }
 	if ($mtime and ($mtime > $last_update_server)) {
 		#$Redraw ||= &import_candidates();
