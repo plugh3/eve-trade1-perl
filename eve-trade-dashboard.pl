@@ -1511,6 +1511,11 @@ sub reg2hub {
 	}
 	return $_reg2hub{$reg};
 }
+sub regid2hub {
+	my ($reg_id) = @_;
+	my $reg_name = $reg_i2n{$reg_id};
+	return &reg2hub($reg_name);
+}
 sub loc_i2n {
 	my ($sysid) = @_;
 	return $primary_stations{$sys_names{$sysid}};
@@ -1875,6 +1880,7 @@ sub import_item_db {
 sub addTrade {
 	my ($from, $to, $id) = @_;
 	my $r = &locs2r($from, $to);
+	#print &time2s()." addTrade() from=$from to=$to item=$id\n";
 
 	if ( $Data{$r}{$id} ) { return; } ### de-dup
 
@@ -1906,14 +1912,14 @@ sub addTradeAllHubs {
 my $blast_last = 0;
 #my $blast_period = 300;
 my $blast_period = 1;
-sub import_candidates {
+sub import_candidates_evecentral {
 	my $FH;
 	if(not open($FH, '<:crlf', $filename_sky2dash)) {
 		print &time2s()." import_candidates(): no cargo file \"$filename_sky2dash\"\n";
 		return;
 	}
 
-	### option B: include all hub permutations = 56 (5.25x)
+	### option B: include all hub permutations = 12 (2.5x)
 	### use sparingly
 	my $blast = 0;
 	if ( time - $blast_last > $blast_period ) {
@@ -1944,8 +1950,8 @@ sub import_candidates {
 	
 	### pass 2: generate Crest requests
 
-	### nuclear option: add all possible hub routes = 12 (2.5x)
-	### use sparingly
+	### nuclear option: check all possible hub routes for each item = 4 x 3 = 12 (2.5x)
+	### use sparingly?
 	if ($blast) { 
 		foreach my $id (keys %itemSet) {
 			&addTradeAllHubs($id); 
@@ -1968,15 +1974,48 @@ sub import_candidates {
 			}
 		}
 	}
-	
+
+	#print &time2s()." import_candidates_evecentral()\n";
+}
+
+### add static favorites list (all hubs)
+sub import_candidates_favorites() {
 	#print &time2s()." favorites (".(@favoriteItems+0)."): @favoriteItems\n";
 	foreach my $itemID (@favoriteItems) { 
 		#print &time2s()." favorite $itemID\n";
 		&addTradeAllHubs($itemID); 
 	}
-	
-	#print &time2s()." import_cargo_lists()\n";
 }
+sub import_candidates_scour() {
+	my $filename_scour2dash = "data-scour.txt";
+	my $FH;
+	if(not open($FH, '<:crlf', $filename_scour2dash)) {
+		print &time2s()." import_candidates_scour(): no file \"$filename_scour2dash\"\n";
+		return;
+	}
+	flock($FH, LOCK_SH);
+	my $n_imports = 0;
+	while (<$FH>) {
+		### Scour format - "<item_id>~<from_rid>~<to_rid>"
+		my $sep = '~';
+		my ($item, $from_rid, $to_rid) = split($sep); chomp $to_rid;
+		my $from_hub = &regid2hub($from_rid+0);
+		my $to_hub = &regid2hub($to_rid+0);
+		
+		if (! $items_name{$item}) { print &time2s()." import_candidates_scour() unknown item $item\n"; next; }
+		#print &time2s()." scour.add() from=$from_hub to=$to_hub item=$item\n";
+		&addTrade($from_hub, $to_hub, $item+0); 
+		$n_imports++;
+	}
+	close $FH;
+	print &time2s()." import_scour(): $n_imports trades\n";
+}
+sub import_candidates {
+	&import_candidates_evecentral();
+	&import_candidates_favorites();
+	&import_candidates_scour();
+}
+
 
 sub dup_order {
 	my ($array_ref, $order) = @_;
