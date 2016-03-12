@@ -246,37 +246,39 @@ class CurlWrapper
 		return $ret;
 	}
 		
-	public $fetch_rate = 0.0;
+	// calculates rate of events over fixed period
+	public $currRate = 0.0;
 	public $max_rate = 0.0;
-	protected $history = array();
+	protected $countsByTime = array();
 	protected $n_gets = 0;
-	protected function sample()
+	protected function recordEvent()
 	{
-		$sample_period = 1.0;  ## sec
+		$samplePeriod = 1.0;  ## sample period used to calculate instantaneous rate
 
-		### current sample
+		### event counter + current time
 		$now = microtime(true);
 		$this->n_gets++;
-		array_unshift($this->history, array($this->n_gets, $now));
 
-		### find end of sampling window
+		### add to history
+		array_unshift($this->countsByTime, array($this->n_gets, $now));
+
+		### find far side of sample window
 		$n_sample = 0;
 		$t_sample = $now;
-		for ($i_sample = 0; $i_sample < count($this->history); $i_sample++) {
-			list ($n_sample, $t_sample) = $this->history[$i_sample];
-			if ($now - $t_sample >= $sample_period) { break; }
+		for ($i_sample = 0; $i_sample < count($this->countsByTime); $i_sample++) {
+			list ($n_sample, $t_sample) = $this->countsByTime[$i_sample];
+			if ($now - $t_sample >= $samplePeriod) { break; }
 		}
 
-		### calc sample (n/usec)
+		### calculate rate (n/usec)
 		$rate = ($now != $t_sample) 
 			? (($this->n_gets - $n_sample) / ($now - $t_sample))
 			: (0.0);
-		$this->fetch_rate = $rate;
+		$this->currRate = $rate;
 		if ($rate > $this->max_rate) { $this->max_rate = $rate; }
 		
-		### output
+		### output current rate
 		$out = sprintf("%7.1f", $rate)." GET/s"; ## gets/sec
-		#echo sprintf("%5d", $this->n_gets).": ".$now." usec\n";
 		echo($this->backspace(strlen($out)));
 		echo $out;
 	}
@@ -374,7 +376,7 @@ class CurlWrapper
                 //execute the callbacks passing the response as argument
                 if ($info['http_code'] == 200) {
                     #echo time2s()."got   ".$url_short."\n";
-					$this->sample();
+					$this->recordEvent();
 					
                     //cache it if configured
                     if($cache)
