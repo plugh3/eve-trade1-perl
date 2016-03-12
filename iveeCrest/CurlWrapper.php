@@ -253,7 +253,7 @@ class CurlWrapper
 	protected $n_gets = 0;
 	protected function recordEvent()
 	{
-		$samplePeriod = 1.0;  ## sample period used to calculate instantaneous rate
+		$samplePeriod = 0.5;  ## sample period used to calculate instantaneous rate
 
 		### event counter + current time
 		$now = microtime(true);
@@ -303,7 +303,7 @@ class CurlWrapper
     public function asyncMultiGet(array $hrefs, array $header, callable $getAuthHeader, callable $callback,
         callable $errCallback = null, $cache = true
     ) {
-		$maxWindow = 300;
+		$maxWindow = 100;
 
         echo time2s()."curl.asyncMultiGet(".sprintf("%4d", count($hrefs)).") x$maxWindow => ".sprintf("%7.1f", 0.0)." GET/s"; 
 		//var_dump($hrefs);
