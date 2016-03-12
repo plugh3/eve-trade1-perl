@@ -30,6 +30,14 @@ use Tk::ProgressBar;
 
 
 my $debugStr = "Gist X-Type Large Shield Booster";
+### static lookup
+my @favoriteItems = (
+	5302, 	## Phased Muon Scoped Sensor Dampener (formerly "Phased Muon Sensor Disruptor I")
+	19814,  ## Phased Scoped Target Painter I (formerly "Phased Weapon Navigation Array Generation Extron")
+	19946, 	## BZ-5 Scoped Gravimetric ECM
+	40519,	## Skill Extractor
+	40520,	## Skill Injector
+);
 
 
 
@@ -61,6 +69,7 @@ if      ($Config{osname} eq "darwin") {
 ### data files
 my $filename_sky2dash = 	"data-sky2dash.txt";
 my $filename_mydata = 		$dir_data.$dir_sep."data-dash-all.txt";
+my $filename_mydata2 = 		"data-dash-all.bak";
 my $filename_crestreqs = 	"data-dash2crest.txt";
 
 
@@ -1960,14 +1969,8 @@ sub import_candidates {
 		}
 	}
 	
-	### manual adds
-	my @favorites = (
-		5302, 	## Phased Muon Sensor Disruptor I
-		40519,	## Skill Extractor
-		40520,	## Skill Injector
-	);
-	#print &time2s()." favorites (".(@favorites+0)."): @favorites\n";
-	foreach my $itemID (@favorites) { 
+	#print &time2s()." favorites (".(@favoriteItems+0)."): @favoriteItems\n";
+	foreach my $itemID (@favoriteItems) { 
 		#print &time2s()." favorite $itemID\n";
 		&addTradeAllHubs($itemID); 
 	}
@@ -2031,7 +2034,7 @@ sub fname2time {
 	my $fnameTime = timegm($ss, $mm, $hh, $dy, $mo-1, $yr-1900, 0);
 	return $fnameTime;
 }
-### time format for Marketlog row: "2015-12-03 20:44:26.000"
+### Marketlog format for "issueDate" field: "2015-12-03 20:44:26.000"
 sub issuedate2time {
 	my ($issueDate) = @_;
 	my ($yr,$mo,$dy,$hh,$mm,$ss,$ms) = split(/[\s.:-]+/, $issueDate);
@@ -2048,7 +2051,7 @@ sub export_my_data {
 	#print &time2s()." export_my_data()\n";
 	my ($FH, $FH2);
 	open($FH,  '>:crlf', $filename_mydata);
-	open($FH2, '>:crlf', $filename_mydata.".bak");
+	open($FH2, '>:crlf', $filename_mydata2);
 	flock($FH,  LOCK_EX);
 	flock($FH2, LOCK_EX);
 
