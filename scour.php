@@ -245,13 +245,13 @@ function next_batch_items(&$q)
 {
 	global $itemList, $n_batch, $batch_size;
 	$batch_start_i = $n_batch * $batch_size;
-	if ($batch_start_i >= count($itemList)) { return true; }
+	if ($batch_start_i >= count($itemList)) { return array(); }
 
 	$items = array_slice($itemList, $batch_start_i, $batch_size);
 	queueAddItems($q, $items);
 
 	$n_batch++;
-	return true;
+	return $items;
 }
 
 
@@ -269,7 +269,7 @@ $n_orig = count($itemList) * 8;
 
 $queue = array();
 while (1) {
-	next_batch_items($queue);
+	$items = next_batch_items($queue);
 
 	// add previous rollovers
 	array_tack($queue, $rollover);
@@ -377,19 +377,25 @@ while (1) {
 	
 	// find profitables
 	$ProfitableItems = array();
-	eachItemAndRoute(function($itemID, $from, $to) use (&$ProfitableItems) {
-		if (isProfitable($itemID, $from, $to)) { $ProfitableItems[$itemID] = true; }
-	});
+	// TODO: check only sublist of $Items
+	eachItemAllRoutes(
+		$items, 
+		function($itemID, $from, $to) use (&$ProfitableItems) {
+			if (isProfitable($itemID, $from, $to)) { $ProfitableItems[] = array($itemID, $from, $to); }
+		}
+	);
 
 	// export profitables
 	$text = "";
-	foreach ($ProfitableItems as $itemID => $val) {
-		$text .= $itemID."\r\n";
+	$sep = '~';
+	foreach ($ProfitableItems as $x) {
+		list($itemID, $from, $to) = $x;
+		$text .= $itemID.$sep.$from.$sep.$to."\r\n";
 	}
 	appendFile($fname_data, $text);
 	
 	
-	echo time2s().fmtInt(count($ProfitableItems))." profitable items\n";
+	echo time2s().fmtInt(count($ProfitableItems))." profitable trades\n";
 	echo time2s().fmtInt($ncalcs)." trades tested\n"; $ncalcs = 0;
 	echo time2s().fmtInt($nsorts)." sort comparisons\n"; $nsorts = 0;
 	echo time2s().fmtInt(count_orders())." orders received\n";
@@ -476,9 +482,16 @@ function eachRoute(callable $block) {
 	}
 }
 // takes fn(item, from, to)
-function eachItemAndRoute(callable $block) {
+function allItemsAllRoutes(callable $block) {
 	global $itemList;
 	foreach ($itemList as $itemID) {
+		eachRoute(function($from, $to) use ($block, $itemID) {
+			$block($itemID, $from, $to);
+		});
+	}
+}
+function eachItemAllRoutes($items, callable $block) {
+	foreach ($items as $itemID) {
 		eachRoute(function($from, $to) use ($block, $itemID) {
 			$block($itemID, $from, $to);
 		});
