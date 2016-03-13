@@ -29,16 +29,70 @@ use Tk::Font;
 use Tk::ProgressBar;
 
 
-my $debugStr = "Gist X-Type Large Shield Booster";
-### static lookup
-my @favoriteItems = (
-	5302, 	## Phased Muon Scoped Sensor Dampener (formerly "Phased Muon Sensor Disruptor I")
-	19814,  ## Phased Scoped Target Painter I (formerly "Phased Weapon Navigation Array Generation Extron")
-	19946, 	## BZ-5 Scoped Gravimetric ECM
-	40519,	## Skill Extractor
-	40520,	## Skill Injector
-);
+### Perl primer
 
+
+my $debugStr = "Gist X-Type Large Shield Booster";
+
+
+### GLOBAL VARIABLES ###
+
+### persistent across recalc()
+my %State_mode = ();
+my @State_selection = ();
+my %Ignore = ();
+### reset on each recalc()
+my %Data = (); ### totals by route/item + underlying bids/asks
+my %Totals = (); ### totals by route only
+my %items_name;
+my %items_size;
+my %items_id;
+my %Bids;
+my %Asks;
+my %Notify = ();
+my $N_items;
+my $N_orders;
+my $N_items_imported = 0;
+my $N_items_exported = 0;
+my $ntrades_deleted = 0;
+
+
+### GLOBAL CONSTANTS ###
+
+#my $Net_tax = 0.9910; 	### Accounting 4
+my $Net_tax = 0.9925; 	### Accounting 5
+my $game_data_expire = 0*60;			### game export data trumps "newer" eve-market.com data for 20 mins
+my $age_expire_export = 1*24*3600;		### game export data purged after 1 day
+my $age_expire_web = 3*24*3600;			### web data purged after 3 days
+my $notify_threshold_price_super = 50*1000000;	### $50M
+my $notify_threshold_price = 25*1000000;	### $30M
+my $notify_threshold_age = 60*60;		### 20 min
+my $minProfitPerSize = 2000;			### $/m3
+my $minProfit = 3*1000000;			### $2.0M/item
+my $total_cost_threshold = 4*1000000000;
+
+
+
+### static lookup
+my %favoriteItems = (
+	5302  => 1, 	## Phased Muon Scoped Sensor Dampener (formerly "Phased Muon Sensor Disruptor I")
+	19814 => 1,  ## Phased Scoped Target Painter I (formerly "Phased Weapon Navigation Array Generation Extron")
+	19946 => 1, 	## BZ-5 Scoped Gravimetric ECM
+	40519 => 1,	## Skill Extractor
+	40520 => 1	## Skill Injector
+);
+sub favoriteItemsAddFilters {
+	foreach my $id (keys %items_name) {
+		my $itemName = $items_name{$id};
+		### "Compressed..." ores
+		if (    $itemName =~ m/^Compressed/ and
+		    not $itemName =~ m/Blueprint/ ) 
+		{
+			$favoriteItems{$id} = 1; 
+		}
+	}
+	
+}
 
 
 ### TODO: spawn processes on OSX
@@ -167,42 +221,6 @@ sub my_beep {
 }
 
 
-
-### GLOBAL VARIABLES ###
-
-### persistent across recalc()
-my %State_mode = ();
-my @State_selection = ();
-my %Ignore = ();
-### reset on each recalc()
-my %Data = (); ### totals by route/item + underlying bids/asks
-my %Totals = (); ### totals by route only
-my %items_name;
-my %items_size;
-my %items_id;
-my %Bids;
-my %Asks;
-my %Notify = ();
-my $N_items;
-my $N_orders;
-my $N_items_imported = 0;
-my $N_items_exported = 0;
-my $ntrades_deleted = 0;
-
-
-### GLOBAL CONSTANTS ###
-
-#my $Net_tax = 0.9910; 	### Accounting 4
-my $Net_tax = 0.9925; 	### Accounting 5
-my $game_data_expire = 0*60;			### game export data trumps "newer" eve-market.com data for 20 mins
-my $age_expire_export = 1*24*3600;		### game export data purged after 1 day
-my $age_expire_web = 3*24*3600;			### web data purged after 3 days
-my $notify_threshold_price_super = 50*1000000;	### $50M
-my $notify_threshold_price = 25*1000000;	### $30M
-my $notify_threshold_age = 60*60;		### 20 min
-my $minProfitPerSize = 2000;			### $/m3
-my $minProfit = 3*1000000;			### $2.0M/item
-my $total_cost_threshold = 4*1000000000;
 
 ### UI config
 my $Pre = ' ';
@@ -1980,13 +1998,21 @@ sub import_candidates_evecentral {
 
 ### add static favorites list (all hubs)
 sub import_candidates_favorites() {
-	#print &time2s()." favorites (".(@favoriteItems+0)."): @favoriteItems\n";
-	foreach my $itemID (@favoriteItems) { 
+	#print &time2s()." favorites (".(%favoriteItems+0)."): %favoriteItems\n";
+	&favoriteItemsAddFilters();
+	foreach my $itemID (keys %favoriteItems) { 
 		#print &time2s()." favorite $itemID\n";
 		&addTradeAllHubs($itemID); 
 	}
 }
 sub import_candidates_scour() {
+	## only every 20m
+	my $cooldown_scour = 20*60;
+	state $last_scour = 0;
+	my $now = time();
+	if ($now - $last_scour < $cooldown_scour) { return; }
+	$last_scour = $now;
+	
 	my $filename_scour2dash = "data-scour.txt";
 	my $FH;
 	if(not open($FH, '<:crlf', $filename_scour2dash)) {
@@ -2008,7 +2034,7 @@ sub import_candidates_scour() {
 		$n_imports++;
 	}
 	close $FH;
-	print &time2s()." import_scour(): $n_imports trades\n";
+	print &time2s()." import_scour(): $n_imports trades <<<\n";
 }
 sub import_candidates {
 	&import_candidates_evecentral();
