@@ -303,7 +303,7 @@ class CurlWrapper
     public function asyncMultiGet(array $hrefs, array $header, callable $getAuthHeader, callable $callback,
         callable $errCallback = null, $cache = true
     ) {
-		$maxWindow = 100;
+		$maxWindow = 50; // fastest is 100
 
         echo time2s()."curl.asyncMultiGet(".sprintf("%4d", count($hrefs)).") x$maxWindow => ".sprintf("%7.1f", 0.0)." GET/s"; 
 		//var_dump($hrefs);
