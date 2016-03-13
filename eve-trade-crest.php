@@ -108,7 +108,7 @@ while (1)
 	} 
     
     // import request file => crestReqs[]
-    $crestReqs = array();
+    $allCrestReqs = array();
 	$regionNames = array();
 	$itemNames = array();
     $fh = fopen($fnameReqs, 'r') or die("Failed to open $fname");
@@ -119,7 +119,7 @@ while (1)
         list($reg_id, $reg_name, $item_id, $item_name, $is_bid) = split($sep, $file_row);
 
 		$row_mod = join_row($reg_id, $item_id, $is_bid);
-        $crestReqs[] = $row_mod;
+        $allCrestReqs[] = $row_mod;
 		$regionNames[$reg_id] = $reg_name;
 		$itemNames[$item_id] = $item_name;
     }
@@ -127,7 +127,7 @@ while (1)
     fclose($fh);
 
 	// empty request file?
-    if (count($crestReqs) == 0) { 
+    if (count($allCrestReqs) == 0) { 
 		if (!$last_empty) { echo time2s()."php (empty request list)\n"; $last_empty = 1;} 
     } else { 
 		$last_empty = 0; 
@@ -135,17 +135,17 @@ while (1)
 
 	// crest GET cooldown (45s)
     $time = time();
-    foreach ($crestReqs as $row) {
+    foreach ($allCrestReqs as $row) {
         $cooldown_crest = 45;
         if (array_key_exists($row, $last2) && $time - $last2[$row] <= $cooldown_crest) { 
             //echo time2s()."defer ".($last2[$row] + 5*60 - $time)."s $reg_name-$item_name\n";
-			array_remove($crestReqs, $row);
+			array_remove($allCrestReqs, $row);
             continue; 
         }
         $last2[$row] = $time;
     }
 	
-	if (count($crestReqs) == 0) { sleep(1); continue; }
+	if (count($allCrestReqs) == 0) { sleep(1); continue; }
     $last = $mtime;
 
 
@@ -153,75 +153,95 @@ while (1)
 	// fetch from Crest
 	// loop until GET queue is empty (some fail b/c rate limits or ???)
 	//
-	$pass = 0;
-	$Orders 	= array();
-    while (! empty($crestReqs)) {
-        $pass++; 
-		#if ($pass > 1) {echo "\x07";}
-
-		// setup params for getMultiMarketOrders2()
-		$typeIDs 	= array();
-		$regionIDs 	= array();
-		$bidTypes 	= array();
-		foreach ($crestReqs as $row) {
-			list($reg_id, $item_id, $is_bid) = split_row($row);
-			// input
-			$typeIDs[] 		= $item_id +0;
-			$regionIDs[] 	= $reg_id +0;
-			$bidTypes[] 	= $is_bid &&true;
-			// output
-			if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); } // init Orders[r][]
-		}
-
-        
-        // populate Orders[reg][item][]
-        $suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-        echo time2s()."php.getMulti(".count($typeIDs).")$suffix\n";
-        $handler->getMultiMarketOrders2(
-            $typeIDs, 
-            $regionIDs, 
-            $bidTypes, 
-            function(\iveeCrest\Response $response) use (&$crestReqs, &$Orders, &$n_success) {
-
-                // parse URL
-                $url = $response->getInfo()['url'];
-				list($reg_id, $item_id, $bid_type) = decode_url($url);
-				$row = join_row($reg_id, $item_id, $bid_type);
-
-				// remove from queue
-                array_remove($crestReqs, $row); 
-
-                // orders: main body of http response
-                // getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
-                // so we need to merge responses into 1 array
-                $orders = $response->content->items;                
-                
-                if (isset($Orders[$reg_id][$item_id])) {
-                    $Orders[$reg_id][$item_id]->orders = array_merge($Orders[$reg_id][$item_id]->orders, $orders);
-                } else {
-                    $Orders[$reg_id][$item_id] = new \stdClass();
-                    $Orders[$reg_id][$item_id]->row = $row;
-                    $Orders[$reg_id][$item_id]->orders = $orders;
-                }
-            },
-            function (\iveeCrest\Response $r) {
-              //echo " HTTP ".$r->getInfo()['http_code']."\n";
-              //echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
-              //echo "\x07"; # beep
-              //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
-            },
-			false // disable caching for getMultiMarketOrders() call (reduce memory)
-        ); // end getMultiMarketOrders() call
+	
+	// break into batches of 1000
+	$batch_size = 1000;
+	for ($b = 0; $b * $batch_size < count($allCrestReqs); $b++) {
+		echo time2s()." Batch #$b (".($b*$batch_size)."-".(($b+1)*$batch_size-1)." of ".count($allCrestReqs).")\n";
 		
-		$out = sprintf("%7.1f", $client->cw->max_rate)." GET/s";
-		echo($client->cw->backspace(strlen($out)));
-        echo $out." peak\n";
+		$crestReqs = array_slice($allCrestReqs, $b * $batch_size, $batch_size);
+		$Orders	= array();
+		$pass = 0;
+		while (! empty($crestReqs)) {
+			$pass++; 
+			#if ($pass > 1) {echo "\x07";}
 
-		$client->cw->max_rate = 0.0;
-    }
-    
-    // export to Marketlogs files
+			// setup params for getMultiMarketOrders2()
+			$typeIDs 	= array();
+			$regionIDs 	= array();
+			$bidTypes 	= array();
+			foreach ($crestReqs as $row) {
+				list($reg_id, $item_id, $is_bid) = split_row($row);
+				// input
+				$typeIDs[] 		= $item_id +0;
+				$regionIDs[] 	= $reg_id +0;
+				$bidTypes[] 	= $is_bid &&true;
+				// output
+				if (!array_key_exists($reg_id, $Orders)) { $Orders[$reg_id] = array(); } // init Orders[r][]
+			}
+
+			
+			// populate Orders[reg][item][]
+			$suffix = ($pass == 1) ? ("") : (", Pass #$pass");
+			echo time2s()."php.getMulti(".count($typeIDs).")$suffix\n";
+			$handler->getMultiMarketOrders2(
+				$typeIDs, 
+				$regionIDs, 
+				$bidTypes, 
+				function(\iveeCrest\Response $response) use (&$crestReqs, &$Orders) {
+
+					// parse URL
+					$url = $response->getInfo()['url'];
+					list($reg_id, $item_id, $bid_type) = decode_url($url);
+					$row = join_row($reg_id, $item_id, $bid_type);
+
+					// remove from queue
+					array_remove($crestReqs, $row); 
+
+					// orders: main body of http response
+					// getMulti() generates 2 GETs for each region.item (buyOrders + sellOrders)
+					// but Marketlog files contain buy + sell orders, so we merge responses
+					//var_dump($response->content->items); exit;
+					if (!isset($response->content->items)) { return; }
+					$orders = convertOrders($response->content->items);
+					$response = null;
+					
+					if (isset($Orders[$reg_id][$item_id])) {
+						$Orders[$reg_id][$item_id]->orders = array_merge($Orders[$reg_id][$item_id]->orders, $orders);
+					} else {
+						$Orders[$reg_id][$item_id] = new \stdClass();
+						$Orders[$reg_id][$item_id]->row = $row;
+						$Orders[$reg_id][$item_id]->orders = $orders;
+					}
+				},
+				function (\iveeCrest\Response $r) {
+				  //echo " HTTP ".$r->getInfo()['http_code']."\n";
+				  //echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
+				  //echo "\x07"; # beep
+				  //if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
+				},
+				false // disable caching for getMultiMarketOrders() call (reduce memory)
+			); // end getMultiMarketOrders() call
+			
+			$typeIDs = null;
+			$regionIDs = null;
+			$bidTypes = null;
+			
+			// peak rate
+			$out = sprintf("%7.1f", $client->cw->max_rate)." GET/s";
+			echo($client->cw->backspace(strlen($out)));
+			echo $out." peak\n";
+			$client->cw->max_rate = 0.0;
+			
+		} // loop until batch queue is empty
+
+    // export batch to Marketlogs
 	exportMarketlogs($Orders, $regionNames, $itemNames);
+
+	
+	
+	} // loop over all batches
+	
 
     #echo time2s()."sleep 1 sec\n";
     sleep(1);
@@ -348,11 +368,34 @@ function formatHeader()
     $ret = $hdr;
     return $ret;
 }
+function convertOrders($orders)
+{
+	$rets = array();
+	foreach ($orders as $x) {
+		$y = new \stdClass();
+		$y->price = $x->price;
+		$y->volume = $x->volume;
+        $y->type = new \stdClass();
+		$y->type->id = $x->type->id;
+        $y->range = $x->range;
+        $y->id = $x->id;
+        $y->volumeEntered = $x->volumeEntered;
+		$y->minVolume = $x->minVolume;
+        $y->buy = $x->buy;
+        $y->issued = $x->issued;
+        $y->duration = $x->duration;
+		$y->location = new \stdClass(); 
+		$y->location->id = $x->location->id;
+		$rets[] = $y;
+	}
+	return $rets;
+}
 function formatOrders($orders, $reg_id)
 {
     $ret = '';
     foreach ($orders as $x)
     {
+		//var_dump($x);
         $price = sprintf("%.2f", $x->price); // NEED
         $volRemaining = $x->volume;          // NEED
         $typeID = $x->type->id;
