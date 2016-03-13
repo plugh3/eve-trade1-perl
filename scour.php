@@ -76,7 +76,7 @@ function isValidItem($x) {
 }
 
 
-$ItemNames = array();
+$ItemNames = array(); // populated from mysql
 function fmtItem($itemID)
 {
 	global $ItemNames;
@@ -159,9 +159,9 @@ function fmtReg($regionID, $leftJustify = true)
 
 
 // 1. get list of items WHERE volume < 8967m3 (22876)
-$itemList = fetch_items_from_mysql("WHERE `volume` < 8967");
-sort($itemList, SORT_NUMERIC);
-echo "mysql pass 2 (group):  ".number_format(count($itemList))."\n";
+$AllItems = fetch_items_from_mysql("WHERE `volume` < 8967");
+sort($AllItems, SORT_NUMERIC);
+echo "mysql pass 2 (group):  ".number_format(count($AllItems))."\n";
 
 // 2. issue Crest requests for each (hub x item x orderType)
 
@@ -214,9 +214,9 @@ function count_orders()
 }
 function reset_orders()
 {
-	global $Orders, $itemList;
+	global $Orders, $AllItems;
 	$Orders = array();
-	foreach ($itemList as $itemID) {
+	foreach ($AllItems as $itemID) {
 		$Orders[$itemID] = array();
 	}
 }
@@ -238,16 +238,16 @@ function queueAddItems(&$q, $items) {
 
 
 $batch_size = 125;
-$n_items = count($itemList);
+$n_items = count($AllItems);
 $n_batches = intval($n_items / $batch_size) + 1;
 $n_batch = 0;
 function next_batch_items(&$q)
 {
-	global $itemList, $n_batch, $batch_size;
+	global $AllItems, $n_batch, $batch_size;
 	$batch_start_i = $n_batch * $batch_size;
-	if ($batch_start_i >= count($itemList)) { return array(); }
+	if ($batch_start_i >= count($AllItems)) { return array(); }
 
-	$items = array_slice($itemList, $batch_start_i, $batch_size);
+	$items = array_slice($AllItems, $batch_start_i, $batch_size);
 	queueAddItems($q, $items);
 
 	$n_batch++;
@@ -260,18 +260,20 @@ function next_batch_items(&$q)
 //$batch_size = 1000;
 //$n_batches = intval($n_orig / $batch_size);
 
-$rollover = array();
-$n_orig = count($itemList) * 8;
 //for ($b = 0; $b < $n_batches; $b++) {
 	// $queue = next batch
 	//$batch_start_i = $b * $batch_size;
 	//$queue = array_slice($superqueue, $batch_start_i, $batch_size);
 
+$n_orig = count($AllItems) * 8;
 $queue = array();
+$rollover = array();
+$t_scour = microtime(true);
 while (1) {
+	// add next batch to $queue
 	$items = next_batch_items($queue);
 
-	// add previous rollovers
+	// add leftovers from previous batch
 	array_tack($queue, $rollover);
 
 	$my_batch_size = count($queue);
@@ -302,66 +304,41 @@ while (1) {
 		// populate Orders[reg][item][]
 		$suffix = ($pass == 1) ? ("") : (", Pass #$pass");
 		echo time2s()."php.getMulti(".count($typeIDs).")$suffix\n";
-		try {
-			$handler->getMultiMarketOrders2(
-				$typeIDs, 
-				$regionIDs, 
-				$bidTypes,
-				function(\iveeCrest\Response $response) use (&$queue, &$Orders) {
+		$handler->getMultiMarketOrders2(
+			$typeIDs, 
+			$regionIDs, 
+			$bidTypes,
+			function(\iveeCrest\Response $response) use (&$queue, &$Orders) {
 
-					// parse parameters from URL
-					$url = $response->getInfo()['url'];
-					list($itemID, $regionID, $bid_type) = decode_url($url);
-					$queueItem = join_row($itemID, $regionID, $bid_type);
-					//echo "got >$queueItem<\n";
-					
-					// remove from queue
-					array_remove($queue, $queueItem); 
-					#echo ".";
-					
+				// parse parameters from URL
+				$url = $response->getInfo()['url'];
+				list($itemID, $regionID, $bid_type) = decode_url($url);
+				$queueItem = join_row($itemID, $regionID, $bid_type);
 				
-					
-					// reporting
-					/*
-					$n_rem = count($queue);
-					$n_done = $n_orig - $n_rem;
-					$status = sprintf("%s complete", fmtPct($n_done / $n_orig));
-					for ($x = 0; $x < strlen($status); $x++) { echo "\b"; }
-					echo $status;
-					flush();
-					*/
+				// remove from queue
+				array_remove($queue, $queueItem); 
+				
+				// process Crest response
+				add_crest_response($itemID, $regionID, $bid_type, $response);
+			},
+			function (\iveeCrest\Response $r) use (&$n503s) {
+				//echo " HTTP ".$r->getInfo()['http_code']."\n";
+				if ($r->getInfo()['http_code'] == "503") { $n503s++; }
+				#echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
+				//if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
+			},
+			false // false = caching disabled for getMultiMarketOrders() call (reduces memory)
+		); // end getMultiMarketOrders() call
 
-					// process Crest response
-					add_crest_response($itemID, $regionID, $bid_type, $response);
-				},
-				function (\iveeCrest\Response $r) use (&$n503s) {
-					//echo " HTTP ".$r->getInfo()['http_code']."\n";
-					if ($r->getInfo()['http_code'] == "503") { $n503s++; }
-					#echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
-					//if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
-				},
-				false // false = caching disabled for getMultiMarketOrders() call (reduces memory)
-			); // end getMultiMarketOrders() call
+		
+		// peak rate sample 
+		$out = sprintf("%7.1f", $client->cw->max_rate)." GET/s";
+		echo($client->cw->backspace(strlen($out)));
+		echo $out." peak";
+		echo " (".fmtPct2($n503s, $my_batch_size)." errors)";
+		echo "\n";
+		$client->cw->max_rate = 0.0;
 			
-			// final sampling output (peak rate)
-			$out = sprintf("%7.1f", $client->cw->max_rate)." GET/s";
-			echo($client->cw->backspace(strlen($out)));
-			echo $out." peak";
-			echo " (".fmtPct2($n503s, $my_batch_size)." errors)";
-			echo "\n";
-			// reset sampling -- sample_reset()
-			$client->cw->max_rate = 0.0;
-			
-		} catch (\iveeCrest\Exceptions\InvalidArgumentException $e){
-			if (preg_match('/TypeID=[0-9]+ not found in market types/', $e->getMessage())) {
-				echo "matched\n";
-			// do nothing
-			} else {
-				echo "not matched; msg = >".$e->getMessage()."<\n";
-				//throw($e);
-			}
-		}
-
 		// push leftovers to next batch (unless this is last batch)
 		if (count($queue)) { echo time2s().count($queue)." leftovers\n"; }
 		if ($n_batch < $n_batches - 1) {
@@ -400,11 +377,20 @@ while (1) {
 	echo time2s().fmtInt($nsorts)." sort comparisons\n"; $nsorts = 0;
 	echo time2s().fmtInt(count_orders())." orders received\n";
 	
-	reset_orders();
-
-	
-	//break; // DEBUG: break after first batch
+	reset_orders(); // conserve memory
 }
+echo time2s().">>> full scour ".fmtSec(microtime(true) - $t_scour)."\n";
+
+function fmtSec ($nsec) 
+{
+	if ($nsec > 99) {
+		$nmin = $nsec / 60.0;
+		return fmtFlt($nmin, 1)."m";
+	} else {
+		return $nsec."s";
+	}
+}
+
 
 
 $dir_export = __DIR__;
@@ -483,8 +469,8 @@ function eachRoute(callable $block) {
 }
 // takes fn(item, from, to)
 function allItemsAllRoutes(callable $block) {
-	global $itemList;
-	foreach ($itemList as $itemID) {
+	global $AllItems;
+	foreach ($AllItems as $itemID) {
 		eachRoute(function($from, $to) use ($block, $itemID) {
 			$block($itemID, $from, $to);
 		});
