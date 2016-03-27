@@ -52,10 +52,16 @@ $client->exportCache($fnameCache);
 
 
 
-
+// bool isValidItem(int item_id)
+// checks item ID for deprecated/invalid/etc
 //$invalidGroups = array(0-11, 13-14, 16-17, 19, 23, 29, 32, 92, 104);
 // "SKIN" groups: 528, 1311, 1319, 351064, 350858, 351844, 368726
-// "SKIN" groupID query => SELECT DISTINCT groupID FROM `invtypes` WHERE typeName LIKE '%SKIN%'
+//
+// "SKIN" groups
+// 1311 - yes
+// 368726 - test items only?
+//
+// "SKIN" groupID query => SELECT DISTINCT groupID FROM `invtypes` WHERE typeName LIKE '% SKIN%'
 function isValidItem($x) {
 	global $handler;
 	$marketHrefs = $handler->getMarketTypeHrefs();
@@ -83,8 +89,11 @@ function fmtItem($itemID)
 	return $ItemNames[$itemID];
 }
 
-// get item list from mysql
-function fetch_items_from_mysql($whereClause) {
+
+// array allItemsWhere($whereClause) - get item list from mysql
+// retval - array of item IDs
+// side effect - populates 
+function allItemsWhere($whereClause) {
 	require_once('mysql_login.php');
 	$db_server = mysql_connect($db_hostname, $db_username, $db_password);
 	if (!$db_server) die("unable to connect to mysql: ".mysql_error());
@@ -100,20 +109,24 @@ function fetch_items_from_mysql($whereClause) {
 	echo "mysql pass 1 (volume): ".number_format($nItems)."\n";
 	for ($i = 0; $i < $nItems; $i++) {
 		$itemID = mysql_result($result, $i, 'typeId');
+
+		// add item to ItemNames[]
+		$itemName = mysql_result($result, $i, 'typeName');
+		global $ItemNames;
+		if (!isset($ItemNames[$itemID])) { $ItemNames[$itemID] = $itemName;}
+		
+		// skip if deprecated item
 		if (!isValidItem($itemID)) continue;
 
-		global $ItemNames;
-		$itemName = mysql_result($result, $i, 'typeName');
-		$ItemNames[$itemID] = $itemName;
-
+		// add item to retval
 		$ret[] = $itemID;
-		#if ($i % 500 == 0) echo(sprintf("%6d %s\n", $itemID, $itemName));
 	}
+	echo "mysql pass 2 (deprecated): ".number_format(count($ret))."\n";
 
 	mysql_free_result($result);
 	mysql_close($db_server);
 	
-	sort($ret);
+	sort($ret, SORT_NUMERIC);
 	return $ret;
 }
 
@@ -158,26 +171,11 @@ function fmtReg($regionID, $leftJustify = true)
 // main()
 
 
-// 1. get list of items WHERE volume < 8967m3 (22876)
-$AllItems = fetch_items_from_mysql("WHERE `volume` < 8967");
-sort($AllItems, SORT_NUMERIC);
-echo "mysql pass 2 (group):  ".number_format(count($AllItems))."\n";
+// $AllItems[] - all purchaseable items items in game (volume < 8967m3) (=22876)
+$AllItems = allItemsWhere("WHERE `volume` < 8967");
 
-// 2. issue Crest requests for each (hub x item x orderType)
-
-// 3. check if profitable
-
-// 4. output list of profitables (from x to x item)
-    
-
-
-
-//
 // $Orders[itemID][regionID] - datastore for Crest responses
-//
-$Orders;
-reset_orders();
-
+$Orders = array();
 $nsorts = 0;
 function sort_orders_asc($a, $b) { global $nsorts; $nsorts++; return (($a->price - $b->price) < 0) ? -1 : 1; }
 function sort_orders_dsc($a, $b) { global $nsorts; $nsorts++; return (($b->price - $a->price) < 0) ? -1 : 1; }
@@ -200,7 +198,7 @@ function add_crest_response($itemID, $regionID, $bid_type, $response)
 		usort($Orders[$itemID][$regionID]->asks, "sort_orders_asc");
 	}
 }
-function count_orders()
+function countOrders()
 {
 	global $Orders;
 	$nOrders = 0;
@@ -212,122 +210,173 @@ function count_orders()
 	}
 	return $nOrders;
 }
-function reset_orders()
+function freeOrders()
 {
 	global $Orders, $AllItems;
-	$Orders = array();
 	foreach ($AllItems as $itemID) {
 		$Orders[$itemID] = array();
 	}
+	$Orders = array();
 }
 
 
-// master list of crest requests ($12k items => 95k requests)
-function queueAddItems(&$q, $items) {
+
+
+//
+// batching -- batch out crest requests, by item
+// need this to stay under the memory cap
+// free up data structures between batches
+// all orders for item X have to be in the same batch
+//
+function initBatch($numItems, $reqsPerItem)
+{
+	global $batch_size;
+	global $maxCrestReqs;
+	$batch_size = intval($maxCrestReqs / $reqsPerItem); // items per batch
+	global $n_items;
+	$n_items = $numItems;
+	global $n_batches;
+	$n_batches = intval($n_items / $batch_size) + 1;
+}
+// nextBatch() - queue next batch of crest requests, return item list
+// queue = array of (item x region x bidType) 
+// retval = list of items queued
+function nextBatch(&$q, $rollover)
+{
+	// calculate batch
+	global $AllItems, $n_batch, $batch_size;
+	$batch_start_i = $n_batch * $batch_size;
+	if ($batch_start_i >= count($AllItems)) { return array(); }
+	$newItems = array_slice($AllItems, $batch_start_i, $batch_size);
+
+	// add items
+	queueItemsAllHubs($q, $newItems); // new items for current batch
+	array_tack($q, $rollover); // carryover from previous batch
+
+	// next batch
+	$n_batch++;
+	return $newItems;
+}
+// queueItemsAllHubs() - add to master list of crest requests 
+// each item x each region x (buy + sell) orders
+// (12k items => 95k requests)
+function queueItemsAllHubs(&$q, $items) {
 	foreach ($items as $itemID) {
 		// add requests for all hub stations
 		global $Hubs;
 		foreach ($Hubs as $regionID) {
-			$q[] = join_row($itemID, $regionID, true); 	// buy orders
-			$q[] = join_row($itemID, $regionID, false);	// sell orders
+			queueRequest($q, $itemID, $regionID, true); 	// buy order
+			queueRequest($q, $itemID, $regionID, false);	// sell order
 		}
 	}
-	echo time2s()."queueAdd(".count($q).")\n";
 }
 
-
-
-$batch_size = 125;
-$n_items = count($AllItems);
-$n_batches = intval($n_items / $batch_size) + 1;
-$n_batch = 0;
-function next_batch_items(&$q)
+// primitive methods for queue
+function queueRequest(&$q, $itemID, $regionID, $bidType) {
+	$q[] = q_join_row($itemID, $regionID, $bidType);
+}
+function q_join_row($reg, $item, $is_bid)
 {
-	global $AllItems, $n_batch, $batch_size;
-	$batch_start_i = $n_batch * $batch_size;
-	if ($batch_start_i >= count($AllItems)) { return array(); }
-
-	$items = array_slice($AllItems, $batch_start_i, $batch_size);
-	queueAddItems($q, $items);
-
-	$n_batch++;
-	return $items;
+	$sep = "~";
+	$ary = array($reg +0, $item +0, $is_bid +0);
+	return join($sep, $ary);
+}
+function q_split_row($row)
+{
+	$sep = "~";
+	list ($reg, $item, $is_bid) = split($sep, $row);
+	$ary = array($reg +0, $item +0, $is_bid +0);
+	return $ary;
 }
 
 
 
-// divide queue[] into batches of size N
-//$batch_size = 1000;
-//$n_batches = intval($n_orig / $batch_size);
 
-//for ($b = 0; $b < $n_batches; $b++) {
-	// $queue = next batch
-	//$batch_start_i = $b * $batch_size;
-	//$queue = array_slice($superqueue, $batch_start_i, $batch_size);
 
-$n_orig = count($AllItems) * 8;
-$queue = array();
+//
+// main loop
+//	
+
+$maxCrestReqs = 1000;
+initBatch(count($AllItems), 8);
+
+
+$q = array();
 $rollover = array();
-$t_scour = microtime(true);
-while (1) {
-	// add next batch to $queue
-	$items = next_batch_items($queue);
-
-	// add leftovers from previous batch
-	array_tack($queue, $rollover);
-
-	$my_batch_size = count($queue);
-	if ($my_batch_size == 0) { break; }
-
+$items = array();
+function initLoop(&$q) {
+	// 1. delete previous data file
+	global $fname_data;
+	if (file_exists($fname_data)) {
+		unlink($fname_data);
+	}
 	
+	// 2. prime first batch of requests
+	global $items;
+	$items = nextBatch($q, array());
+	global $n_batch;
+	$n_batch = 0;
+}
+
+// analytics
+$n_orig = count($AllItems) * 8;
+$t_scour = microtime(true);
+$all_profitables = 0;
+$all_orders = 0;
+$all_calcs = 0;
+for (initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
+
 	// loop until GET queue is empty
+	$my_batch_size = count($q); // initial size of queue
 	$pass = 0;
+	// analytics
 	$n503s = 0;
 	$t_start = microtime(true);
-	while (! empty($queue)) {
+	while (! empty($q)) {
 		// debug
 		$pass++; if ($pass > 1) { beep(); }
 		$suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-		echo ">>> batch #$n_batch (".(($n_batch-1)*$batch_size*8)." - ".((($n_batch-1)*$batch_size*8) + count($queue) - 1).")$suffix\n";
+		echo ">>> batch $n_batch of $n_batches   (".(($n_batch-1)*$batch_size*8)." - ".((($n_batch-1)*$batch_size*8) + count($q) - 1).")$suffix\n";
 
 		// setup args for getMultiMarketOrders()
 		$typeIDs 	= array();
 		$regionIDs 	= array();
 		$bidTypes 	= array();
-		foreach ($queue as $key => $queueItem) {
-			list($itemID, $regionID, $bidType) = split_row($queueItem);
+		foreach ($q as $key => $queueItem) {
+			list($itemID, $regionID, $bidType) = q_split_row($queueItem);
 			$typeIDs[] 		= $itemID +0;
 			$regionIDs[] 	= $regionID +0;
 			$bidTypes[] 	= $bidType &&true;
 		}
 		
-		// populate Orders[reg][item][]
+		// process crest responses populate Orders[reg][item][] from crest responses
 		$suffix = ($pass == 1) ? ("") : (", Pass #$pass");
 		echo time2s()."php.getMulti(".count($typeIDs).")$suffix\n";
 		$handler->getMultiMarketOrders2(
 			$typeIDs, 
 			$regionIDs, 
 			$bidTypes,
-			function(\iveeCrest\Response $response) use (&$queue, &$Orders) {
+			function(\iveeCrest\Response $response) use (&$q, &$Orders) {
 
 				// parse parameters from URL
 				$url = $response->getInfo()['url'];
 				list($itemID, $regionID, $bid_type) = decode_url($url);
-				$queueItem = join_row($itemID, $regionID, $bid_type);
+				$queueItem = q_join_row($itemID, $regionID, $bid_type);
 				
 				// remove from queue
-				array_remove($queue, $queueItem); 
+				array_remove($q, $queueItem); 
 				
 				// process Crest response
 				add_crest_response($itemID, $regionID, $bid_type, $response);
 			},
 			function (\iveeCrest\Response $r) use (&$n503s) {
-				//echo " HTTP ".$r->getInfo()['http_code']."\n";
-				if ($r->getInfo()['http_code'] == "503") { $n503s++; }
-				#echo time2s()."php.getMultiMarketOrders() error, http code ".$r->getInfo()['http_code']."\n";
-				//if ($r->getInfo()['http_code'] == 0) { var_dump($r); }
+				$code = $r->getInfo()['http_code'];
+				if ($code == "503") { $n503s++; }
+				//echo " HTTP $code\n";
+				//echo time2s()."php.getMultiMarketOrders() error, http code $code\n";
+				//if ($code == 0) { var_dump($r); }
 			},
-			false // false = caching disabled for getMultiMarketOrders() call (reduces memory)
+			false // false = caching disabled to reduce memory
 		); // end getMultiMarketOrders() call
 
 		
@@ -340,10 +389,10 @@ while (1) {
 		$client->cw->max_rate = 0.0;
 			
 		// push leftovers to next batch (unless this is last batch)
-		if (count($queue)) { echo time2s().count($queue)." leftovers\n"; }
+		if (count($q)) { echo time2s().count($q)." leftovers\n"; }
 		if ($n_batch < $n_batches - 1) {
-			$rollover = $queue;
-			$queue = array();
+			$rollover = $q;
+			$q = array(); // free memory (!)
 		}
 		
 	}
@@ -352,50 +401,102 @@ while (1) {
 	$t_batch = microtime(true) - $t_start;
 	echo time2s()."=> ".fmtFlt($t_batch)."s\n";
 	
-	// find profitables
-	$ProfitableItems = array();
-	// TODO: check only sublist of $Items
+	
+/*
+	// find profitable trades by chewing crest responses
+	$profitableItems = array();
+	// in: $Orders[]
+	// out: $profitableItems[]
+	$profitableItems = array();
 	eachItemAllRoutes(
 		$items, 
-		function($itemID, $from, $to) use (&$ProfitableItems) {
-			if (isProfitable($itemID, $from, $to)) { $ProfitableItems[] = array($itemID, $from, $to); }
+		function($itemID, $from, $to) use (&$profitableItems) {
+			if (isProfitable($itemID, $from, $to)) { $profitableItems[] = array($itemID, $from, $to); }
 		}
 	);
+*/
+	$profitables = calcProfitables($items);
+	exportProfitables($profitables);
 
-	// export profitables
+	logLoop(); // do before freeing $profitables
+
+	// free memory
+	freeOrders(); // CRITICAL
+	$profitables = array();
+}
+logEnd();
+
+
+function logLoop() 
+{
+	global $profitableItems;
+	global $ncalcs;
+	global $nsorts;
+
+	echo time2s().fmtInt(count($profitableItems))." profitable trades\n";
+	echo time2s().fmtInt($ncalcs)." trades tested\n"; $ncalcs = 0;
+	echo time2s().fmtInt($nsorts)." sort comparisons\n"; $nsorts = 0;
+	echo time2s().fmtInt(countOrders())." orders received\n";
+
+	global $all_profitables;
+	global $all_orders;
+	global $all_calcs;
+	$all_profitables += count($profitableItems);
+	$all_orders += countOrders();
+	$all_calcs += $ncalcs;	
+}
+function logEnd() 
+{
+	global $profitableItems;
+	global $all_profitables;
+	global $all_orders;
+	global $all_calcs;
+	global $t_scour;
+
+	echo "---------\n";
+	echo time2s().">>> full scour ".fmtSec(microtime(true) - $t_scour)."\n";
+	echo time2s().fmtInt($all_profitables, 9)." profitable trades\n";
+	echo time2s().fmtInt($all_calcs, 9)." trades tested\n";
+	echo time2s().fmtInt($all_orders, 9)." orders received\n";
+}
+
+
+
+
+// calcProfitables(): check $items list for profitable trades in $Orders[]
+// scan crest responses for profitable trades
+function calcProfitables($items) 
+{
+	$profitables = array();
+	eachItemAllRoutes(
+		$items, 
+		function($itemID, $from, $to) use (&$profitables) {
+			if (isProfitable($itemID, $from, $to)) { $profitables[] = array($itemID, $from, $to); }
+		}
+	);
+	return $profitables;
+}
+// exportProfitables() - export profitable trades to file
+function exportProfitables($trades)
+{
 	$text = "";
 	$sep = '~';
-	foreach ($ProfitableItems as $x) {
+	foreach ($trades as $x) {
 		list($itemID, $from, $to) = $x;
 		$text .= $itemID.$sep.$from.$sep.$to."\r\n";
 	}
+	global $fname_data;
 	appendFile($fname_data, $text);
-	
-	
-	echo time2s().fmtInt(count($ProfitableItems))." profitable trades\n";
-	echo time2s().fmtInt($ncalcs)." trades tested\n"; $ncalcs = 0;
-	echo time2s().fmtInt($nsorts)." sort comparisons\n"; $nsorts = 0;
-	echo time2s().fmtInt(count_orders())." orders received\n";
-	
-	reset_orders(); // conserve memory
 }
-echo time2s().">>> full scour ".fmtSec(microtime(true) - $t_scour)."\n";
 
-function fmtSec ($nsec) 
-{
-	if ($nsec > 99) {
-		$nmin = $nsec / 60.0;
-		return fmtFlt($nmin, 1)."m";
-	} else {
-		return $nsec."s";
-	}
-}
 
 
 
 $dir_export = __DIR__;
 function appendFile($fname, $text)
 {
+	echo time2s()."appendFile() \"$fname\"\n";
+	
     global $dir_export;
     $fname_short = substr($fname, strpos($fname, $dir_export) + strlen($dir_export));
     //$n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
@@ -413,9 +514,9 @@ function appendFile($fname, $text)
 
 // TODO: class CrestReq
 // (regionID x itemID x bidType)
-// TODO: filter for profitables
-// TODO: output profitable trades
 $ncalcs = 0;
+// isProfitable() - checks if Orders[] has profitable trade for this (item x from x to)
+// even if only $0.01 profit after tax
 function isProfitable($itemID, $from, $to)
 {
 	global $Orders, $ncalcs;
@@ -457,8 +558,9 @@ function isProfitable($itemID, $from, $to)
 	return ($bestProfit > 0.0);
 }
 
+
 // takes fn(from, to)
-function eachRoute(callable $block) {
+function forAllRoutes(callable $block) {
 	global $Hubs;
 	foreach ($Hubs as $from) {
 		foreach ($Hubs as $to) {
@@ -468,17 +570,9 @@ function eachRoute(callable $block) {
 	}
 }
 // takes fn(item, from, to)
-function allItemsAllRoutes(callable $block) {
-	global $AllItems;
-	foreach ($AllItems as $itemID) {
-		eachRoute(function($from, $to) use ($block, $itemID) {
-			$block($itemID, $from, $to);
-		});
-	}
-}
 function eachItemAllRoutes($items, callable $block) {
 	foreach ($items as $itemID) {
-		eachRoute(function($from, $to) use ($block, $itemID) {
+		forAllRoutes(function($from, $to) use ($block, $itemID) {
 			$block($itemID, $from, $to);
 		});
 	}
@@ -516,6 +610,12 @@ echo time2s()."done\n";
 
 
 
+
+
+
+
+
+
 // Timer Class
 //
 // --class methods--
@@ -533,23 +633,6 @@ echo time2s()."done\n";
 // t->reset()
 
 
-
-
-
-
-function join_row($reg, $item, $is_bid)
-{
-	$sep = "~";
-	$ary = array($reg +0, $item +0, $is_bid +0);
-	return join($sep, $ary);
-}
-function split_row($row)
-{
-	$sep = "~";
-	list ($reg, $item, $is_bid) = split($sep, $row);
-	$ary = array($reg +0, $item +0, $is_bid +0);
-	return $ary;
-}
 function regexp_esc($x)
 {
 	return preg_quote($x, '/');
@@ -576,44 +659,15 @@ function array_remove(array &$ary, $val) {
     }
 	echo "array_remove() failed >$val<\n";
 }
-function fmtFlt($x, $digits=1) {
-	$fmt = "%0.".$digits."f";
-	return sprintf($fmt, $x);
-}
-function fmtInt($x, $fieldLen=0) {
-	$commafied = number_format($x);
-
-	// count commas added
-	//$raw = sprintf("%d", $x);
-	//$nCommas = strlen($commafied) - strlen($raw);
-
-	if ($fieldLen) { 
-		$fmt = "%" . $fieldLen . "s";
-		return sprintf($fmt, $commafied);
-	}
-	return $commafied;
-}
-function fmtPct($x, $digits=1) {
-	$allDigits = 4 + $digits;
-	$fmt = '%'.$allDigits.'.'.$digits."f%%";
-	return sprintf($fmt, 100.0 * $x);
-}
-function fmtPct2($numer, $denom, $digits=1) {
-	return fmtPct(($numer + 0.0)/$denom, $digits);
-}
-function fmtMoney($x, $fieldLen="") {
-	$commafied = number_format($x, 2);
-	$fmt = "$%".$fieldLen."s";
-	return sprintf($fmt, $commafied);
-}
 function beep() {
 	echo "\x07";
 }
 function time2s($time = '')
 {
     if ($time == '') { $time = time(); }
-    return date("h:i:sa ", $time - 8*60*60);
+    return date("h:i:sa ", $time - 7*60*60);
 }
+
 
 
 
@@ -676,5 +730,45 @@ class SampleRate {
 		$ret = "";
 		for ($i = 0; $i < $x; $i++) { $ret .= "\x8"; }
 		return $ret;
+	}
+}
+
+function fmtFlt($x, $digits=1) {
+	$fmt = "%0.".$digits."f";
+	return sprintf($fmt, $x);
+}
+function fmtInt($x, $fieldLen=0) {
+	$commafied = number_format($x);
+
+	// count commas added
+	$raw = sprintf("%d", $x);
+	$nCommas = strlen($commafied) - strlen($raw);
+
+	if ($fieldLen) { 
+		$fmt = "%" . $fieldLen . "s";
+		return sprintf($fmt, $commafied);
+	}
+	return $commafied;
+}
+function fmtPct($x, $digits=1) {
+	$allDigits = 4 + $digits;
+	$fmt = '%'.$allDigits.'.'.$digits."f%%";
+	return sprintf($fmt, 100.0 * $x);
+}
+function fmtPct2($numer, $denom, $digits=1) {
+	return fmtPct(($numer + 0.0)/$denom, $digits);
+}
+function fmtMoney($x, $fieldLen="") {
+	$commafied = number_format($x, 2);
+	$fmt = "$%".$fieldLen."s";
+	return sprintf($fmt, $commafied);
+}
+function fmtSec ($nsec) 
+{
+	if ($nsec > 99) {
+		$nmin = $nsec / 60.0;
+		return fmtFlt($nmin, 1)."m";
+	} else {
+		return $nsec."s";
 	}
 }
