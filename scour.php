@@ -9,7 +9,11 @@
 
 $debugStr = "Gist X-Type Large Shield Booster";
 
+
+
+//
 // OS-specific stuff
+//
 switch (strtolower(php_uname("s"))) {
     case "darwin":
         $dir_home = getenv("HOME");
@@ -25,6 +29,7 @@ switch (strtolower(php_uname("s"))) {
 }        
 $fname_cache = 		'cache-ivee2.txt';
 $fname_data  = 		'data-scour.txt';
+
 
 
 //
@@ -52,47 +57,11 @@ $client->exportCache($fnameCache);
 
 
 
-// bool isValidItem(int item_id)
-// checks item ID for deprecated/invalid/etc
-//$invalidGroups = array(0-11, 13-14, 16-17, 19, 23, 29, 32, 92, 104);
-// "SKIN" groups: 528, 1311, 1319, 351064, 350858, 351844, 368726
-//
-// "SKIN" groups
-// 1311 - yes
-// 368726 - test items only?
-//
-// "SKIN" groupID query => SELECT DISTINCT groupID FROM `invtypes` WHERE typeName LIKE '% SKIN%'
-function isValidItem($x) {
-	global $handler;
-	$marketHrefs = $handler->getMarketTypeHrefs();
-	if (!isset($marketHrefs[$x])) return false;
 
-	$invalidItems = array(49, 50, 51, 52, 53, 270, 670, 681, 682);
-	if (in_array($x, $invalidItems)) return false;
-
-	$deprecatedItems = array(784, 935, 943, 947);
-	if (in_array($x, $deprecatedItems)) return false;
-
-	if ($x >=   0 && $x <=  17) return false;
-	if ($x >=  24 && $x <=  33) return false; // groups 13, 14, 16, 17, [not 18], 19
-	if ($x >=  49 && $x <=  59) return false; // group 24
-	if ($x >= 164 && $x <= 166) return false; // group 23
-	
-	return true;
-}
-
-
-$ItemNames = array(); // populated from mysql
-function fmtItem($itemID)
-{
-	global $ItemNames;
-	return $ItemNames[$itemID];
-}
-
-
-// array allItemsWhere($whereClause) - get item list from mysql
+// allItemsWhere() - get item list from mysql
+// arg0 - $whereClause
 // retval - array of item IDs
-// side effect - populates 
+// side effect - populates ItemNames[]
 function allItemsWhere($whereClause) {
 	require_once('mysql_login.php');
 	$db_server = mysql_connect($db_hostname, $db_username, $db_password);
@@ -129,14 +98,41 @@ function allItemsWhere($whereClause) {
 	sort($ret, SORT_NUMERIC);
 	return $ret;
 }
+// isValidItem() - checks item ID for deprecated/invalid/etc
+// arg0 - item ID
+function isValidItem($x) {
+	global $handler;
+	$marketHrefs = $handler->getMarketTypeHrefs();
+	if (!isset($marketHrefs[$x])) return false;
+
+	$invalidItems = array(49, 50, 51, 52, 53, 270, 670, 681, 682);
+	if (in_array($x, $invalidItems)) return false;
+
+	$deprecatedItems = array(784, 935, 943, 947);
+	if (in_array($x, $deprecatedItems)) return false;
+
+	if ($x >=   0 && $x <=  17) return false;
+	if ($x >=  24 && $x <=  33) return false; // groups 13, 14, 16, 17, [not 18], 19
+	if ($x >=  49 && $x <=  59) return false; // group 24
+	if ($x >= 164 && $x <= 166) return false; // group 23
+	
+	return true;
+}
+$ItemNames = array(); // populated from mysql
+function fmtItem($itemID)
+{
+	global $ItemNames;
+	return $ItemNames[$itemID];
+}
 
 
 
 
 
 
-
-
+//
+// regions + hubs
+//
 $reg_id_jita = 		10000002;
 $reg_id_amarr = 	10000043;
 $reg_id_dodixie = 	10000032;
@@ -168,13 +164,12 @@ function fmtReg($regionID, $leftJustify = true)
 }
 
 
+
+
 // main()
 
 
-// $AllItems[] - all purchaseable items items in game (volume < 8967m3) (=22876)
-$AllItems = allItemsWhere("WHERE `volume` < 8967");
-
-// $Orders[itemID][regionID] - datastore for Crest responses
+// $Orders[item][region] - datastore for Crest responses
 $Orders = array();
 $nsorts = 0;
 function sort_orders_asc($a, $b) { global $nsorts; $nsorts++; return (($a->price - $b->price) < 0) ? -1 : 1; }
@@ -222,42 +217,9 @@ function freeOrders()
 
 
 
-//
-// batching -- batch out crest requests, by item
-// need this to stay under the memory cap
-// free up data structures between batches
-// all orders for item X have to be in the same batch
-//
-function initBatch($numItems, $reqsPerItem)
-{
-	global $batch_size;
-	global $maxCrestReqs;
-	$batch_size = intval($maxCrestReqs / $reqsPerItem); // items per batch
-	global $n_items;
-	$n_items = $numItems;
-	global $n_batches;
-	$n_batches = intval($n_items / $batch_size) + 1;
-}
-// nextBatch() - queue next batch of crest requests, return item list
-// queue = array of (item x region x bidType) 
-// retval = list of items queued
-function nextBatch(&$q, $rollover)
-{
-	// calculate batch
-	global $AllItems, $n_batch, $batch_size;
-	$batch_start_i = $n_batch * $batch_size;
-	if ($batch_start_i >= count($AllItems)) { return array(); }
-	$newItems = array_slice($AllItems, $batch_start_i, $batch_size);
 
-	// add items
-	queueItemsAllHubs($q, $newItems); // new items for current batch
-	array_tack($q, $rollover); // carryover from previous batch
 
-	// next batch
-	$n_batch++;
-	return $newItems;
-}
-// queueItemsAllHubs() - add to master list of crest requests 
+// queueItemsAllHubs() - add crest requests, from any hub, to any hub 
 // each item x each region x (buy + sell) orders
 // (12k items => 95k requests)
 function queueItemsAllHubs(&$q, $items) {
@@ -265,13 +227,31 @@ function queueItemsAllHubs(&$q, $items) {
 		// add requests for all hub stations
 		global $Hubs;
 		foreach ($Hubs as $regionID) {
-			queueRequest($q, $itemID, $regionID, true); 	// buy order
-			queueRequest($q, $itemID, $regionID, false);	// sell order
+			queueRequestBuy($q, $itemID, $regionID);
+			queueRequestSell($q, $itemID, $regionID);
+		}
+	}
+}
+
+// queueItemsSellAllHubs() - add crest requests, sell orders in all hubs
+// (12k SKIN items => 95k requests)
+function queueItemsSellAllHubs(&$q, $items) {
+	foreach ($items as $itemID) {
+		// add requests for all hub stations
+		global $Hubs;
+		foreach ($Hubs as $regionID) {
+			queueRequestSell($q, $itemID, $regionID);
 		}
 	}
 }
 
 // primitive methods for queue
+function queueRequestBuy(&$q, $itemID, $regionID) {
+	$q[] = q_join_row($itemID, $regionID, true);
+}
+function queueRequestSell(&$q, $itemID, $regionID) {
+	$q[] = q_join_row($itemID, $regionID, false);
+}
 function queueRequest(&$q, $itemID, $regionID, $bidType) {
 	$q[] = q_join_row($itemID, $regionID, $bidType);
 }
@@ -291,14 +271,76 @@ function q_split_row($row)
 
 
 
+//
+// batching -- batch out crest requests, by item
+// need this to stay under the memory cap
+// free up data structures between batches
+// all orders for item X need to be in the same batch
+//
+
+// initBatch() - divides items[] into batches of size $maxCrestReqs
+// $queue = array of (item x region x bidType) 
+// $queueItemsFn = fn() that queues crest requests based on itemList
+// $items = master list of items
+// $reqsPerItem = # crest requests per item
+// retval = list of items queued
+// works with nextBatch()
+function firstBatch(&$q, callable $queueItemsFn, $items, $reqsPerItem)
+{
+	global $Batch_itemList;
+	$Batch_itemList = $items;
+	global $Batch_queueItemsFn;
+	$Batch_queueItemsFn = $queueItemsFn;
+	global $batch_size;
+	global $maxCrestReqs;
+	$batch_size = intval($maxCrestReqs / $reqsPerItem); // items per batch
+	global $n_items;
+	$n_items = count($items);
+	global $n_batches;
+	$n_batches = intval($n_items / $batch_size) + 1;
+	global $n_batch;
+	$n_batch = 0;
+	// analytics
+	global $n_orig;
+	$n_orig = $n_items * $reqsPerItem;
+	
+	return nextBatch($q, array());
+}
+// nextBatch() - queue next batch of crest requests, return item list
+// $queue = array of (item x region x bidType) 
+// $rollover = carryover requests from previous batch, to be queued
+// retval = list of items queued
+// assumes AllItems[] is static
+function nextBatch(&$q, $rollover)
+{
+	// calculate batch
+	global $Batch_itemList, $Batch_queueItemsFn, $n_batch, $batch_size;
+	$batch_start_i = $n_batch * $batch_size;
+	if ($batch_start_i >= count($Batch_itemList)) { return array(); }
+	$newItems = array_slice($Batch_itemList, $batch_start_i, $batch_size);
+
+	// add items
+	$Batch_queueItemsFn($q, $newItems); // queue new items 
+	array_tack($q, $rollover); // queue carryovers
+
+	// next batch
+	$n_batch++;
+	return $newItems;
+}
 
 
 //
 // main loop
 //	
 
-$maxCrestReqs = 1000;
-initBatch(count($AllItems), 8);
+// $AllItems[] - all purchaseable items items in game (volume < 8967m3) (=22876)
+// "SKIN" groups
+// 1311 - yes
+// 368726 - test items only?
+//
+// "SKIN" groupID query => SELECT DISTINCT groupID FROM `invtypes` WHERE typeName LIKE '% SKIN%'
+$reqsPerItem = 8;
+$maxCrestReqs = 1000; // max number of requests sent to multiGet at one time
 
 
 $q = array();
@@ -311,21 +353,20 @@ function initLoop(&$q) {
 		unlink($fname_data);
 	}
 	
-	// 2. prime first batch of requests
-	global $items;
-	$items = nextBatch($q, array());
-	global $n_batch;
-	$n_batch = 0;
+	// 2. load first batch of items
+	global $reqsPerItem;
+	$allItems = allItemsWhere("WHERE `volume` < 8967");
+	$items = firstBatch($q, "queueItemsAllHubs", $allItems, $reqsPerItem);
+	return $items;
 }
 
+
 // analytics
-$n_orig = count($AllItems) * 8;
 $t_scour = microtime(true);
 $all_profitables = 0;
 $all_orders = 0;
 $all_calcs = 0;
-for (initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
-
+for ($items = initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
 	// loop until GET queue is empty
 	$my_batch_size = count($q); // initial size of queue
 	$pass = 0;
@@ -336,7 +377,7 @@ for (initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
 		// debug
 		$pass++; if ($pass > 1) { beep(); }
 		$suffix = ($pass == 1) ? ("") : (", Pass #$pass");
-		echo ">>> batch $n_batch of $n_batches   (".(($n_batch-1)*$batch_size*8)." - ".((($n_batch-1)*$batch_size*8) + count($q) - 1).")$suffix\n";
+		echo ">>> batch $n_batch of $n_batches   (".(($n_batch-1)*$batch_size*$reqsPerItem)." - ".((($n_batch-1)*$batch_size*$reqsPerItem) + count($q) - 1).")$suffix\n";
 
 		// setup args for getMultiMarketOrders()
 		$typeIDs 	= array();
@@ -402,19 +443,9 @@ for (initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
 	echo time2s()."=> ".fmtFlt($t_batch)."s\n";
 	
 	
-/*
-	// find profitable trades by chewing crest responses
-	$profitableItems = array();
+	// find profitable trades by analyzing crest responses
 	// in: $Orders[]
-	// out: $profitableItems[]
-	$profitableItems = array();
-	eachItemAllRoutes(
-		$items, 
-		function($itemID, $from, $to) use (&$profitableItems) {
-			if (isProfitable($itemID, $from, $to)) { $profitableItems[] = array($itemID, $from, $to); }
-		}
-	);
-*/
+	// out: $profitables[]
 	$profitables = calcProfitables($items);
 	exportProfitables($profitables);
 
@@ -492,26 +523,6 @@ function exportProfitables($trades)
 
 
 
-$dir_export = __DIR__;
-function appendFile($fname, $text)
-{
-	echo time2s()."appendFile() \"$fname\"\n";
-	
-    global $dir_export;
-    $fname_short = substr($fname, strpos($fname, $dir_export) + strlen($dir_export));
-    //$n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
-    //$fname_short2 = $match[1];
-    //echo time2s()."crest-php.export() \"$fname_short\"\n";
-
-    $fh = fopen($fname, 'a') or die("Failed to open $fname");
-    flock($fh, LOCK_EX);
-    fwrite($fh, $text);
-    flock($fh, LOCK_UN);
-    fclose($fh);
-}
-
-
-
 // TODO: class CrestReq
 // (regionID x itemID x bidType)
 $ncalcs = 0;
@@ -558,6 +569,24 @@ function isProfitable($itemID, $from, $to)
 	return ($bestProfit > 0.0);
 }
 
+$dir_export = __DIR__;
+function appendFile($fname, $text)
+{
+	echo time2s()."appendFile() \"$fname\"\n";
+	
+    global $dir_export;
+    $fname_short = substr($fname, strpos($fname, $dir_export) + strlen($dir_export));
+    //$n = preg_match("/^(.*)-[0-9]{4}.[0-9]{2}.[0-9]{2} [0-9]{6}.txt$/", $fname_short, $match);
+    //$fname_short2 = $match[1];
+    //echo time2s()."crest-php.export() \"$fname_short\"\n";
+
+    $fh = fopen($fname, 'a') or die("Failed to open $fname");
+    flock($fh, LOCK_EX);
+    fwrite($fh, $text);
+    flock($fh, LOCK_UN);
+    fclose($fh);
+}
+
 
 // takes fn(from, to)
 function forAllRoutes(callable $block) {
@@ -567,6 +596,15 @@ function forAllRoutes(callable $block) {
 			if ($from === $to) { continue; }
 			$block($from, $to);
 		}
+	}
+}
+function forAllToJita(callable $block) {
+	global $Hubs;
+	global $reg_id_jita;
+	foreach ($Hubs as $from) {
+		$to = $reg_id_jita;
+		if ($from === $to) { continue; }
+		$block($from, $to);
 	}
 }
 // takes fn(item, from, to)
