@@ -258,7 +258,7 @@ my $color_yellow =	'#dfdf88';
 my $color_purple = 	'#c600ff';
 my $color_orange =      '#ff8000';
 my $color_blue =	'#0070dd';
-
+my $color_orange_lt = 	'#ffa500';
 
 
 
@@ -2772,7 +2772,7 @@ sub repop {
 			}
 			### Color [Age > 1hr] yellow
 			if (time - $Data{$r}{$i}{Age} > 3600) { 
-				&change_color_cell($p_item, $col_age, $color_yellow); 
+				&change_color_cell($p_item, $col_age, $color_orange_lt); 
 			}
 
 			

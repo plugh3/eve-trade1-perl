@@ -287,7 +287,7 @@ function array_remove(array &$ary, $val) {
 function time2s($time = '')
 {
     if ($time == '') { $time = time(); }
-    return date("h:i:sa ", $time - 8*60*60);
+    return date("h:i:sa ", $time - 7*60*60);
 }
 
 
