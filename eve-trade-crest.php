@@ -157,7 +157,7 @@ while (1)
 	// break into batches of 1000
 	$batch_size = 1000;
 	for ($b = 0; $b * $batch_size < count($allCrestReqs); $b++) {
-		echo time2s()." Batch #$b (".($b*$batch_size)."-".(($b+1)*$batch_size-1)." of ".count($allCrestReqs).")\n";
+		echo time2s()."Batch $b of ".(intval(count($allCrestReqs)/$batch_size)+1)."   (".($b*$batch_size)."-".(($b+1)*$batch_size-1)." of ".count($allCrestReqs).")\n";
 		
 		$crestReqs = array_slice($allCrestReqs, $b * $batch_size, $batch_size);
 		$Orders	= array();
