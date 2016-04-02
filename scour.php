@@ -7,9 +7,16 @@
 //iterator
 //concat
 
+
 $debugStr = "Gist X-Type Large Shield Booster";
 
 
+// spawn mysqld if needed
+$tasklist = system("tasklist");
+if (! preg_match("/mysqld/", $tasklist)) {
+	echo "no mysql";
+	pclose(popen("start C:\\xampp\\xampp-control.exe", "r"));
+}
 
 //
 // OS-specific stuff
@@ -64,9 +71,15 @@ $client->exportCache($fnameCache);
 // side effect - populates ItemNames[]
 function allItemsWhere($whereClause) {
 	require_once('mysql_login.php');
-	$db_server = mysql_connect($db_hostname, $db_username, $db_password);
-	if (!$db_server) die("unable to connect to mysql: ".mysql_error());
 
+	// wait for mysqld to spawn
+	$db_server = null;
+	while (! $db_server) {
+		$db_server = mysql_connect($db_hostname, $db_username, $db_password);
+		if (!$db_server) die("unable to connect to mysql: ".mysql_error());
+		sleep(1);
+	}
+	
 	$db_database = 'evesdd';
 	$db_table = '`invtypes`';
 	mysql_select_db($db_database);
@@ -355,8 +368,9 @@ function initLoop(&$q) {
 	
 	// 2. load first batch of items
 	global $reqsPerItem;
-	$allItems = allItemsWhere("WHERE `volume` < 8967");
-	$items = firstBatch($q, "queueItemsAllHubs", $allItems, $reqsPerItem);
+	global $AllItems;
+	$AllItems = allItemsWhere("WHERE `volume` < 8967");
+	$items = firstBatch($q, "queueItemsAllHubs", $AllItems, $reqsPerItem);
 	return $items;
 }
 
@@ -449,7 +463,11 @@ for ($items = initLoop($q); count($q) > 0; $items = nextBatch($q, $rollover)) {
 	$profitables = calcProfitables($items);
 	exportProfitables($profitables);
 
-	logLoop(); // do before freeing $profitables
+	// analytics
+	global $nprofitables, $norders;
+	$nprofitables = count($profitables);
+	$norders = countOrders();
+	logLoop(); 
 
 	// free memory
 	freeOrders(); // CRITICAL
@@ -460,25 +478,25 @@ logEnd();
 
 function logLoop() 
 {
-	global $profitableItems;
+	global $nprofitables;
+	global $norders;
 	global $ncalcs;
 	global $nsorts;
 
-	echo time2s().fmtInt(count($profitableItems))." profitable trades\n";
+	echo time2s().fmtInt($nprofitables)." profitable trades\n";
 	echo time2s().fmtInt($ncalcs)." trades tested\n"; $ncalcs = 0;
 	echo time2s().fmtInt($nsorts)." sort comparisons\n"; $nsorts = 0;
-	echo time2s().fmtInt(countOrders())." orders received\n";
+	echo time2s().fmtInt($norders)." orders received\n";
 
 	global $all_profitables;
 	global $all_orders;
 	global $all_calcs;
-	$all_profitables += count($profitableItems);
-	$all_orders += countOrders();
+	$all_profitables += $nprofitables;
+	$all_orders += $norders;
 	$all_calcs += $ncalcs;	
 }
 function logEnd() 
 {
-	global $profitableItems;
 	global $all_profitables;
 	global $all_orders;
 	global $all_calcs;
