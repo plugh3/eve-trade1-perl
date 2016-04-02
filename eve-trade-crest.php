@@ -238,10 +238,9 @@ while (1)
     // export batch to Marketlogs
 	exportMarketlogs($Orders, $regionNames, $itemNames);
 
-	
-	
 	} // loop over all batches
-	
+	echo time2s()."--- all batches completed ---\n";
+
 
     #echo time2s()."sleep 1 sec\n";
     sleep(1);

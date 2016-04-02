@@ -12,10 +12,21 @@ $debugStr = "Gist X-Type Large Shield Booster";
 
 
 // spawn mysqld if needed
-$tasklist = system("tasklist");
+function exec2stdout ($execCmd) {
+	$stdout = array();
+	exec($execCmd, $stdout);
+	return implode($stdout);
+}
+#$tasks_stdout = array();
+#exec("tasklist", $tasks_stdout);
+#$tasklist = implode($tasks_stdout);
+$tasklist = exec2stdout("tasklist");
 if (! preg_match("/mysqld/", $tasklist)) {
 	echo "no mysql";
+	//echo "tasklist = >".$tasklist."<";
 	pclose(popen("start C:\\xampp\\xampp-control.exe", "r"));
+} else {
+	#echo "yes mysql";
 }
 
 //
