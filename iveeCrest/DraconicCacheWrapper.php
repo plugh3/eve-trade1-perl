@@ -202,7 +202,7 @@ class DraconicCacheWrapper implements ICache
     //
     public function exportCache($fname)
     {
-        echo time2s()."cache.exportCache() $fname\n";
+        //echo time2s()."cache.exportCache() $fname\n";
 
         $text = serialize($this->cache2);
                 
